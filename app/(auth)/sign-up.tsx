@@ -71,7 +71,7 @@ export default function signUP() {
             console.log(JSON.stringify(response, null, 2))
 
             if(response.status == 'complete') {
-                const backend_response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/patient/create_patient`, {
+                const backend_response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_therapist`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ export default function signUP() {
                     }),
                 })
                 const data = await backend_response.json();
-                console.log("Successfully created new Patient with ID : ", JSON.stringify(data));
+                console.log("Successfully created new Therapist with ID : ", JSON.stringify(data));
                 console.log("Signed up successfully")
                 router.push('/sign-in')
             }
