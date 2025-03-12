@@ -1,4 +1,4 @@
-import { StyleSheet, Image, Platform, TouchableOpacity, Pressable, View } from 'react-native';
+import { StyleSheet, Image, Platform, TouchableOpacity, Pressable, View, TextInput } from 'react-native';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import  ScreenHeader  from '@/components/ScreenHeader';
 import { Alert } from 'react-native';
 import {useState} from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import * as React from 'react';
 
 
 export default function TabTwoScreen() {
@@ -19,6 +20,7 @@ export default function TabTwoScreen() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [image, setImage] = useState(user?.imageUrl);
+  const [username, setUsername] = useState("");
 
   const handleSignOut = async () => {
     try {
@@ -45,6 +47,48 @@ export default function TabTwoScreen() {
     }
   };
 
+  const changeIcon = async () => {
+    setIsEditing(!isEditing);
+  }
+
+  const handleSave = React.useCallback(async () => {
+    setIsEditing(!isEditing);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: user?.id,
+          username: username,
+          firstname: user?.firstName,
+          lastname: user?.lastName,
+          email: user?.emailAddresses[0].emailAddress,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors) {
+          // Handle validation errors
+          data.errors.forEach((error: any) => {
+            console.error(`Validation error: ${error.message}`);
+          });
+        } else {
+          console.error('Error updating profile:', data);
+        }
+        throw new Error('Failed to update profile');
+      }
+
+      console.log('Profile updated successfully:', data);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+    
+    await user?.update({username: username});
+  }, [username, isEditing, user]);
+
   return (
     <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
       <ScreenHeader title="Your Profile & Settings"/>
@@ -66,20 +110,37 @@ export default function TabTwoScreen() {
             resizeMode="contain"
             />
         </Pressable>
-        <View style={{alignSelf: 'center'}}>
+        <View style={{alignSelf: 'center', paddingTop: 30}}>
+        {isEditing? (
+          <TextInput
+                      style={{ color: "black", borderBottomColor: "black", borderBottomWidth: 1, width: 120, fontSize: 20}}
+                      value={username}
+                      placeholder="Enter username"
+                      placeholderTextColor="#666666"
+                      onChangeText={(text) => {
+                        setUsername(text);
+                      }}
+                    />
+        ) : (
+
           <ThemedText style={styles.text}>{user?.username}</ThemedText>
-          <ThemedText style={styles.text}>{user?.fullName}</ThemedText>
+        )
+
+        }
+          <ThemedText style={{marginTop: 10, fontSize: 20}}>{user?.fullName}</ThemedText>
         </View>
         <View>
-          <Pressable onPress={() => setIsEditing(!isEditing)} style={{width: '100%'}}>
+          <Pressable onPress={changeIcon} style={{width: '100%'}}>
            {isEditing? (
             <LinearGradient colors={["#E91313", "#EB9BD0"]}
             style={styles.saveButton}>
-            <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+            <TouchableOpacity onPress={handleSave}>
             <ThemedText style={styles.buttonText}>Save Changes?</ThemedText>
           </TouchableOpacity>
           </LinearGradient>) : (
-          <IconSymbol style={styles.cog} name="gear" size={24} color={'black'}/>)}
+          <IconSymbol style={styles.cog} name="gear" size={24} color={'black'}/>
+          
+          )}
           </Pressable>
         </View>
       </View>
@@ -134,7 +195,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    padding: 8
+    padding: 6,
+    position: 'relative',
+    right: 50,
+
+
   },
   buttonInner: {
     padding: 12,

@@ -290,7 +290,7 @@ export default function signUP() {
                         <View style={styles.policyContainer}>
                             <Checkbox
                                 value={policyAccepted}
-                                onValueChange={() => {policyAccepted ? setPolicyAccepted(false) : setPolicyAccepted(true)}}
+                                onValueChange={() => {setPolicyAccepted(!policyAccepted)}}
                                 color={policyAccepted ? AppColors.LightBlue : undefined}
                                 style={styles.checkbox}
                             />
