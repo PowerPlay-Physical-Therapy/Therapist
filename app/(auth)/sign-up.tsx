@@ -11,6 +11,8 @@ import Checkbox from 'expo-checkbox';
 export default function signUP() {
     const { isLoaded, signUp } = useSignUp();
     const router = useRouter();
+    const { isLoaded, signUp } = useSignUp();
+    const router = useRouter();
 
     const [emailAddress, setEmailAddress] = React.useState('');
     const [password, setPassword] = React.useState('');
@@ -18,7 +20,14 @@ export default function signUP() {
     const [firstName, setFirstName] = React.useState('');
     const [lastName, setLastName] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
+    const [emailAddress, setEmailAddress] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [username, setUsername] = React.useState('');
+    const [firstName, setFirstName] = React.useState('');
+    const [lastName, setLastName] = React.useState('');
+    const [confirmPassword, setConfirmPassword] = React.useState('');
     const [policyAccepted, setPolicyAccepted] = React.useState(false);
+    
     
     const [errors, setErrors] = React.useState({
         firstName: '',
@@ -30,6 +39,16 @@ export default function signUP() {
         policy: '',
     });
 
+    // Real-time confirm password validation
+    React.useEffect(() => {
+        if (confirmPassword && confirmPassword !== password) {
+            setErrors(prev => ({ ...prev, confirmPassword: "Passwords don't match" }));
+        } else {
+            setErrors(prev => ({ ...prev, confirmPassword: '' }));
+        }
+    }, [confirmPassword, password]);
+
+    // Input Validation Function
     // Real-time confirm password validation
     React.useEffect(() => {
         if (confirmPassword && confirmPassword !== password) {
@@ -66,6 +85,30 @@ export default function signUP() {
         }
         if (!policyAccepted) {
             newErrors.policy = 'You must accept the privacy policy';
+        const newErrors = { firstName: '', lastName: '', username: '', email: '', password: '', confirmPassword: '', policy: '' };
+
+        if (!firstName.trim()) {
+            newErrors.firstName = 'First name is required';
+            valid = false;
+        }
+        if (!lastName.trim()) {
+            newErrors.lastName = 'Last name is required';
+            valid = false;
+        }
+        if (!username.trim()) {
+            newErrors.username = 'Username is required';
+            valid = false;
+        }
+        if (!emailAddress.trim() || !/\S+@\S+\.\S+/.test(emailAddress)) {
+            newErrors.email = 'Invalid email format';
+            valid = false;
+        }
+        if (password.length < 8) {
+            newErrors.password = 'Password must be at least 8 characters';
+            valid = false;
+        }
+        if (!policyAccepted) {
+            newErrors.policy = 'You must accept the privacy policy';
             valid = false;
         }
 
@@ -76,8 +119,12 @@ export default function signUP() {
     // ✅ Sign-Up Button Handler
     const onSignUpPress = async () => {
         if (!isLoaded) return;
+    // ✅ Sign-Up Button Handler
+    const onSignUpPress = async () => {
+        if (!isLoaded) return;
 
         if (!validateInputs()) {
+            return; // Stop if validation fails
             return; // Stop if validation fails
         }
 
@@ -94,13 +141,23 @@ export default function signUP() {
                 console.log("Signed up successfully");
                 // nav to home screen
                 router.replace("/");
+            });
+
+            if (response.status === 'complete') {
+                console.log("Signed up successfully");
+                // nav to home screen
+                router.replace("/");
             }
         } catch (err) {
+            console.error("Sign-up error:", JSON.stringify(err, null, 2));
             console.error("Sign-up error:", JSON.stringify(err, null, 2));
         }
     };
 
     return (
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+                <ThemedView style={{ flex: 1, justifyContent: 'center', padding: 40 }}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
                 <ThemedView style={{ flex: 1, justifyContent: 'center', padding: 40 }}>
@@ -125,10 +182,12 @@ export default function signUP() {
                             <Checkbox
                                 value={policyAccepted}
                                 onValueChange={setPolicyAccepted}
+                                onValueChange={setPolicyAccepted}
                                 color={policyAccepted ? AppColors.LightBlue : undefined}
                                 style={styles.checkbox}
                             />
                             <ThemedText style={styles.policyText}>
+                                I agree to the {' '}
                                 I agree to the {' '}
                                 <Link href="/privacy-policy" asChild>
                                     <TouchableOpacity>
@@ -141,24 +200,33 @@ export default function signUP() {
 
                         {/* Sign-Up Button */}
                         <LinearGradient colors={[AppColors.Purple, AppColors.LightBlue]} style={styles.button}>
+                        {/* Sign-Up Button */}
+                        <LinearGradient colors={[AppColors.Purple, AppColors.LightBlue]} style={styles.button}>
                             <TouchableOpacity style={styles.buttonInner} onPress={onSignUpPress}>
                                 <ThemedText style={styles.buttonText}>Create My Account</ThemedText>
                             </TouchableOpacity>
                         </LinearGradient>
 
                         {/* Sign-in Link */}
+
+                        {/* Sign-in Link */}
                         <View style={styles.bottomView}>
                             <ThemedText>
                                 Already have an account? 
+                            <ThemedText>
+                                Already have an account? 
                                 <Link href="/sign-in">
+                                    <ThemedText style={{ color: AppColors.Blue }}> Sign in!</ThemedText>
                                     <ThemedText style={{ color: AppColors.Blue }}> Sign in!</ThemedText>
                                 </Link>
                             </ThemedText>
                         </View>
                     </ThemedView>
+                    </ThemedView>
                 </ThemedView>
             </ScrollView>
         </KeyboardAvoidingView>
+    );
     );
 }
 
@@ -179,7 +247,36 @@ const InputField = ({ value, placeholder, onChangeText, secureTextEntry = false,
     </>
 );
 
+const InputField = ({ value, placeholder, onChangeText, secureTextEntry = false, error }) => (
+    <>
+        <LinearGradient colors={[AppColors.LightBlue, AppColors.White]} style={styles.input}>
+            <TextInput
+                style={{ color: "black", marginLeft: 10 }}
+                autoCapitalize="none"
+                value={value}
+                placeholder={placeholder}
+                placeholderTextColor="#666666"
+                secureTextEntry={secureTextEntry}
+                onChangeText={onChangeText}
+            />
+        </LinearGradient>
+        {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+    </>
+);
+
 const styles = StyleSheet.create({
+    button: { borderRadius: 25, marginTop: 10, padding: 12, alignItems: 'center' },
+    buttonInner: { alignItems: 'center' },
+    buttonText: { fontWeight: 'bold' },
+    bottomView: { alignSelf: 'center', marginTop: 20 },
+    input: { borderRadius: 25, marginTop: 10, padding: 15, backgroundColor: 'white' },
+    policyContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
+    checkbox: { marginRight: 10 },
+    policyText: { flex: 1 },
+    policyLink: { color: AppColors.Blue, textDecorationLine: 'underline' },
+    errorText: { color: 'red', fontSize: 12, marginLeft: 15, marginTop: 5 },
+    powerplayTitle: { fontFamily: 'Meticula', fontSize: 28, textAlign: 'center', color: AppColors.Blue },
+});
     button: { borderRadius: 25, marginTop: 10, padding: 12, alignItems: 'center' },
     buttonInner: { alignItems: 'center' },
     buttonText: { fontWeight: 'bold' },
