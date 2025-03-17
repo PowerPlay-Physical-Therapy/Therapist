@@ -89,7 +89,7 @@ export default function signIN() {
           </ThemedText>
           <ThemedText style={{ color: "Black", fontSize: 24, marginTop: 10 }}>
             to{" "}
-            <ThemedText style={{ color: AppColors.Blue, fontSize: 24}}>Powerplay</ThemedText>
+            <ThemedText style={{ color: AppColors.Blue, fontSize: 24}}>Power Play Provider</ThemedText>
           </ThemedText>
         </ThemedView>
         <LinearGradient
@@ -144,6 +144,15 @@ export default function signIN() {
             </TouchableOpacity>
           </LinearGradient>
         </ThemedView>
+        <View style={styles.forgotPasswordView}>
+          <ThemedText>
+            <Link href="/password-change">
+              <ThemedText style={{ color: AppColors.Blue }}>
+                Forgot your Password?
+              </ThemedText>
+            </Link>
+          </ThemedText>
+        </View>
       </ThemedView>
       <View style={styles.bottomView}>
         <ThemedText>
@@ -214,5 +223,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 15,
     marginTop: 5,
+  },
+  forgotPasswordView: {
+    marginTop: 14,
+    alignSelf: "center",
   },
 });
