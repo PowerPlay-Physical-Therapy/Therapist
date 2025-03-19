@@ -14,6 +14,7 @@ import { StyleSheet } from "react-native";
 import { ThemedView } from "@/components/ThemedView";
 import { AppColors } from "@/constants/Colors";
 import { LinearGradient } from "expo-linear-gradient";
+import ForgotPassword from "./password-change";
 
 export default function signIN() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -89,7 +90,7 @@ export default function signIN() {
           </ThemedText>
           <ThemedText style={{ color: "Black", fontSize: 24, marginTop: 10 }}>
             to{" "}
-            <ThemedText style={{ color: AppColors.Blue, fontSize: 24}}>Powerplay</ThemedText>
+            <ThemedText style={{ color: AppColors.Blue, fontSize: 24}}>Powerplay Provider</ThemedText>
           </ThemedText>
         </ThemedView>
         <LinearGradient
@@ -131,6 +132,7 @@ export default function signIN() {
             }}
           />
         </LinearGradient>
+
         {errors.password ? (
           <Text style={styles.errorText}>{errors.password}</Text>
         ) : null}
@@ -144,7 +146,17 @@ export default function signIN() {
             </TouchableOpacity>
           </LinearGradient>
         </ThemedView>
+        <View style={styles.forgotPasswordView}>
+          <ThemedText>
+            <Link href="/password-change">
+              <ThemedText style={{ color: AppColors.Blue }}>
+                Forgot your Password?
+              </ThemedText>
+            </Link>
+          </ThemedText>
+        </View>
       </ThemedView>
+
       <View style={styles.bottomView}>
         <ThemedText>
           Don't have an account?
@@ -165,9 +177,9 @@ export default function signIN() {
           </Link>
         </ThemedText>
       </View>
-    </ThemedView>
-  );
-}
+  </ThemedView> )};
+  
+
 
 const styles = StyleSheet.create({
   button: {
@@ -191,7 +203,10 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     alignSelf: "center",
   },
-
+  forgotPasswordView: {
+    marginTop: 14,
+    alignSelf: "center",
+  },
   input: {
     borderRadius: 25,
     marginTop: 10,
@@ -214,5 +229,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 15,
     marginTop: 5,
+  },
+  forgotPasswordView: {
+    marginTop: 14,
+    alignSelf: "center",
   },
 });
