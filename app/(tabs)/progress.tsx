@@ -8,7 +8,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 export default function ProgressScreen() {
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
-        <ScreenHeader title="Progress" />
+        <ScreenHeader title="Patient Analytics" />
       </LinearGradient>
     )
 }

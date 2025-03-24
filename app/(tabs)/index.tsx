@@ -20,7 +20,7 @@ export default function HomeScreen() {
   }
   return (
     <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
-    <ScreenHeader title="Welcome!" />
+    <ScreenHeader title="Home Library" logo={true}/>
   </LinearGradient>
   )
 }
