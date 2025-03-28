@@ -195,7 +195,7 @@ const InputField = ({ value, placeholder, onChangeText, secureTextEntry = false,
 const styles = StyleSheet.create({
     button: { borderRadius: 25, marginTop: 10, padding: 12, alignItems: 'center' },
     buttonInner: { alignItems: 'center' },
-    buttonText: { fontWeight: 'bold' },
+    buttonText: { fontWeight: 'normal' },
     bottomView: { alignSelf: 'center', marginTop: 20 },
     input: { borderRadius: 25, marginTop: 10, padding: 15, backgroundColor: 'white' },
     policyContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },

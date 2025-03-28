@@ -72,7 +72,7 @@ export default function ExploreScreen() {
                                 <ThemedText style={{ fontSize: 18, paddingLeft: 10, fontWeight: 'bold' }}>{category.title}</ThemedText>
                                 {category["subcategory"].map((subcategory: any, index2: any) => (
                                     <View style={{ margin: 5, padding: 5, backgroundColor: AppColors.OffWhite, borderRadius: 15 }} key={index2}>
-                                        <ThemedText style={{ paddingLeft: 5 }}>{subcategory.subtitle}</ThemedText>
+                                        <ThemedText style={{ paddingLeft: 5, fontWeight: 'bold'}}>{subcategory.subtitle}</ThemedText>
                                         <ScrollView horizontal={true}>
                                             {subcategory["exercises"].map((exercise: any, index3: any) => (
                                                 <TouchableOpacity onPress={() => {
@@ -83,7 +83,7 @@ export default function ExploreScreen() {
                                                 }} key={index3}>
                                                     <View style={{ alignItems: "center", justifyContent: "flex-end", margin: 5, borderRadius: 15, zIndex: 0, shadowOffset: { height: 0.2, width: 0.2 }, shadowRadius: 3, shadowOpacity: 0.5 }}>
                                                         <Image source={{ uri: exercise.thumbnail_url }} style={{ width: width * 0.5, height: height * 0.2, borderRadius: 15, zIndex: 2 }} />
-                                                        <Text style={{ position: "absolute", zIndex: 3, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: 2.5, margin: 4 }} >{exercise.name}</Text>
+                                                        <ThemedText style={{fontWeight: 'bold', position: "absolute", zIndex: 3, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: 2.5, margin: 4 }} >{exercise.name}</ThemedText>
                                                     </View>
                                                 </TouchableOpacity>
                                             ))}
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     },
     subcategoryTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
         paddingLeft: 5,
     },
     exerciseName: {

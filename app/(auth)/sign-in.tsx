@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   buttonText: {
-    fontWeight: "bold",
+    fontWeight: "normal",
   },
   bottomView: {
     backgroundColor: "white",
