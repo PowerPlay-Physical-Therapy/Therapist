@@ -107,7 +107,7 @@ export default function signUP() {
                 const data = await backend_response.json();
                 console.log("Successfully created new Patient with ID : ", JSON.stringify(data));
                 console.log("Signed up successfully")
-                router.push('/sign-in') }
+                router.push('/home') }
         } catch (err) {
             console.error("Sign-up error:", JSON.stringify(err, null, 2));
         }
