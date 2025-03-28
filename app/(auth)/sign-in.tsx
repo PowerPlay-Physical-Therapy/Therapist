@@ -146,15 +146,16 @@ export default function signIN() {
             </TouchableOpacity>
           </LinearGradient>
         </ThemedView>
-        <View style={styles.forgotPasswordView}>
-          <ThemedText>
+
+      <View style={styles.forgotPasswordView}>
+        <ThemedText>
             <Link href="/password-change">
               <ThemedText style={{ color: AppColors.Blue }}>
                 Forgot your Password?
               </ThemedText>
             </Link>
-          </ThemedText>
-        </View>
+        </ThemedText>
+      </View>
       </ThemedView>
 
       <View style={styles.bottomView}>
@@ -229,9 +230,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 15,
     marginTop: 5,
-  },
-  forgotPasswordView: {
-    marginTop: 14,
-    alignSelf: "center",
   },
 });

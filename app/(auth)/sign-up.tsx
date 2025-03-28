@@ -90,11 +90,24 @@ export default function signUP() {
                 password,
             });
 
-            if (response.status === 'complete') {
-                console.log("Signed up successfully");
-                // nav to home screen
-                router.replace("/");
-            }
+            if(response.status == 'complete') {
+                const backend_response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_therapist`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: response.createdUserId,
+                        username: response.username,
+                        firstname: response.firstName,
+                        lastname: response.lastName,
+                        email: response.emailAddress,
+                    }),
+                })
+                const data = await backend_response.json();
+                console.log("Successfully created new Patient with ID : ", JSON.stringify(data));
+                console.log("Signed up successfully")
+                router.push('/sign-in') }
         } catch (err) {
             console.error("Sign-up error:", JSON.stringify(err, null, 2));
         }
@@ -164,7 +177,7 @@ export default function signUP() {
 
 const InputField = ({ value, placeholder, onChangeText, secureTextEntry = false, error }) => (
     <>
-        <LinearGradient colors={[AppColors.LightBlue, AppColors.White]} style={styles.input}>
+        <LinearGradient start={{x:0, y: 0}} end={{x: 1, y: 0}}colors={[AppColors.LightBlue, AppColors.White]} style={styles.input}>
             <TextInput
                 style={{ color: "black", marginLeft: 10 }}
                 autoCapitalize="none"
@@ -188,7 +201,7 @@ const styles = StyleSheet.create({
     policyContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
     checkbox: { marginRight: 10 },
     policyText: { flex: 1 },
-    policyLink: { color: AppColors.Blue, textDecorationLine: 'underline' },
+    policyLink: { color: AppColors.Blue, textDecorationLine: 'underline', position: 'relative', top: 16 },
     errorText: { color: 'red', fontSize: 12, marginLeft: 15, marginTop: 5 },
-    powerplayTitle: { fontFamily: 'Meticula', fontSize: 28, textAlign: 'center', color: AppColors.Blue },
+    powerplayTitle: { fontFamily: 'Meticula', fontSize: 28, textAlign: 'center', color: AppColors.Blue, lineHeight: 30 },
 });

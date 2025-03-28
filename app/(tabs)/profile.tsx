@@ -1,9 +1,9 @@
 import { StyleSheet, Image, Platform, TouchableOpacity, Pressable, View, TextInput } from 'react-native';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
-import { ScrollView } from 'react-native';
+import { ScrollView, Switch } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -21,11 +21,15 @@ export default function TabTwoScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [image, setImage] = useState(user?.imageUrl);
   const [username, setUsername] = useState("");
+  const[notifications, setNotifications] = useState(false);
+
+  const toggleNotifications = () => {
+    setNotifications(!notifications);}
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      router.replace('/sign-in'); // Redirect to sign-in page after logout
+      router.push('/sign-in'); // Redirect to sign-in page after logout
     } catch (err) {
       console.error("Error signing out:", err);
     }
@@ -54,7 +58,7 @@ export default function TabTwoScreen() {
   const handleSave = React.useCallback(async () => {
     setIsEditing(!isEditing);
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/patient/update_patient/${user?.username}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -92,8 +96,8 @@ export default function TabTwoScreen() {
   return (
     <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
       <ScreenHeader title="Your Profile & Settings"/>
-      {/* Add Logout Button */}
-      <ThemedView style={styles.buttonContainer}>
+      <ScrollView style={{flex: 1, marginBottom: 80}}>
+        <LinearGradient start={{x: 0, y: 0.25}} end={{x: 0.5, y: 1}}style={styles.buttonContainer} colors={[AppColors.LightBlue, AppColors.OffWhite]}>
         <View style={{flexDirection: 'row', justifyContent: 'space-evenly', width: '100%', marginBottom: 20}}>
         <ThemedView style={styles.headerImage}>
           
@@ -157,9 +161,33 @@ export default function TabTwoScreen() {
             <ThemedText style={styles.buttonText}>Sign Out</ThemedText>
           </TouchableOpacity>
         </LinearGradient>
+        </LinearGradient>
+      <ThemedView style={styles.container}>
+        <ThemedText style={{fontSize: 16}}>Subscription Plan: Active</ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.container}>
+        <ThemedText style={{fontSize: 16}}>Manage Patients</ThemedText>
+        <Image source={require('@/assets/images/chevron-right.png')}></Image>
+      </ThemedView>
+      <ThemedView style={{...styles.container, flexDirection: 'column'}}>
+        <ThemedView style={{flexDirection: 'row', backgroundColor: AppColors.OffWhite, alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 12}}>
+          <ThemedText style={{fontSize: 16}}>Push Notifications</ThemedText>
+          <Switch onValueChange={toggleNotifications} value={notifications} thumbColor={AppColors.OffWhite} trackColor={{false: 'grey', true: AppColors.Blue}}/>
         </ThemedView>
+        
+        <ThemedText style={{fontSize: 12, color: 'grey', lineHeight: 14, paddingTop: 12, borderTopColor: "lightgrey", borderTopWidth: 1}}>You'll recieve friendly notifications to stay on track with your fitness goals!</ThemedText>
+
+      </ThemedView>
+      <ThemedView style={styles.container}>
+        <ThemedText style={{fontSize: 16}}>Privacy Policy</ThemedText>
+        <Link href="/privacy-policy" >
+          <Image source={require('@/assets/images/chevron-right.png')}></Image>
+        </Link>
+      </ThemedView>
+    </ScrollView>
       
     </LinearGradient>
+
   );
 }
 
@@ -174,8 +202,21 @@ const styles = StyleSheet.create({
   buttonContainer: {
     alignItems: 'center',
     margin: 20,
+    marginBottom: 10,
     padding: 20,
     backgroundColor: AppColors.LightBlue,
+    borderRadius: 20,
+    flex: 1,
+  },
+  container: {
+    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: "space-between",
+    margin: 20,
+    marginTop: 10,
+    marginBottom: 10,
+    padding: 20,
+    backgroundColor: AppColors.OffWhite,
     borderRadius: 20,
   },
   button: {
