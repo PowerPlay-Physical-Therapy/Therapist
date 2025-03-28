@@ -32,7 +32,7 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
-        name="progress"
+        name="analytics"
         options={{
           title: '',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.clipboard.fill" color={color} />,
@@ -47,14 +47,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: '',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="messages"
+        name="message"
         options={{
           title: "",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name='message.fill' color={color} />,
