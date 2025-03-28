@@ -7,9 +7,9 @@ import ScreenHeader from '@/components/ScreenHeader';
 
 export default function MessagesScreen() {
     return (
-        <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
-        <ScreenHeader title="Messages" logo={true}/>
-      </LinearGradient>
+        <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
+            <ScreenHeader title="Messages" logo={true} />
+        </LinearGradient>
     )
 }
 
@@ -18,4 +18,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-    } });
+    }
+});

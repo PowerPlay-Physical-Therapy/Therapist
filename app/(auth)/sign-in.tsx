@@ -58,7 +58,7 @@ export default function signIN() {
       if (signInAttempt.status == "complete") {
         await setActive({ session: signInAttempt.createdSessionId });
         console.log("Signed in Successfully");
-        router.replace("/");
+        router.replace("/home");
       } else {
         console.error(JSON.stringify(signInAttempt, null, 2));
       }
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   buttonText: {
-    fontWeight: "bold",
+    fontWeight: "normal",
   },
   bottomView: {
     backgroundColor: "white",

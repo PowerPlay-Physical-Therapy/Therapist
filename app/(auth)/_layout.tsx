@@ -5,7 +5,7 @@ export default function GuestLayout() {
     const { isSignedIn } = useAuth()
 
     if (isSignedIn) {
-        return <Redirect href={'/(tabs)/profile'} />
+        return <Redirect href={'/home'} />
     }
     return <Stack screenOptions= {{headerShown: false}}/>
 }

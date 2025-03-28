@@ -5,11 +5,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import ScreenHeader from '@/components/ScreenHeader';
 
-export default function ProgressScreen() {
+export default function AnalyticsScreen() {
     return (
-        <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
-        <ScreenHeader title="Patient Analytics" />
-      </LinearGradient>
+        <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
+            <ScreenHeader title="Patient Analytics" />
+        </LinearGradient>
     )
 }
 
@@ -18,4 +18,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-    } });
+    }
+});

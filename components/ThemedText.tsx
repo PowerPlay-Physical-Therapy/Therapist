@@ -37,29 +37,29 @@ const styles = StyleSheet.create({
   default: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily : 'Meticula',
+    fontFamily : 'Montserrat',
   },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '600',
-    fontFamily: 'Meticula',
+    fontFamily: 'Montserrat',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     lineHeight: 32,
-    fontFamily: 'Meticula',
+    fontFamily: 'Montserrat',
   },
   subtitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Meticula',
+    fontFamily: 'Montserrat',
   },
   link: {
     lineHeight: 30,
     fontSize: 16,
     color: '#0a7ea4',
-    fontFamily: 'Meticula',
+    fontFamily: 'Montserrat',
   },
 });
