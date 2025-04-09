@@ -11,7 +11,7 @@ import { useUser } from '@clerk/clerk-expo';
 import Constants from 'expo-constants';
 import { Stack } from 'expo-router';
 
-const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:8000";
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 type Patient = {
   id: string;
