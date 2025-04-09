@@ -111,7 +111,7 @@ export default function ManagePatients() {
         <ScreenHeader
           title="Manage Your Patients"
           leftButton={
-            <TouchableOpacity onPress={() => router.push('/therapist-home')}>
+            <TouchableOpacity onPress={() => router.push('/profile')}>
               <Image
                 source={require('@/assets/images/chevron-left.png')}
                 style={{ width: 24, height: 24 }}
