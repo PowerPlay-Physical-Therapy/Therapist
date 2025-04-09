@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import ScreenHeader from '@/components/ScreenHeader';
 import { Alert } from 'react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as React from 'react';
 
@@ -22,7 +22,20 @@ export default function ProfileScreen() {
     const [image, setImage] = useState(user?.imageUrl);
     const [username, setUsername] = useState("");
     const [notifications, setNotifications] = useState(false);
-
+    useEffect(() => {
+        const fetchDebugInfo = async () => {
+          try {
+            const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/debug-db-info`);
+            const data = await res.json();
+            console.log("🚀 DB INFO:", data);
+          } catch (error) {
+            console.error("❌ Failed to fetch debug info:", error);
+          }
+        };
+    
+        fetchDebugInfo();
+      }, []);
+    
     const toggleNotifications = () => {
         setNotifications(!notifications);
     }
@@ -37,20 +50,46 @@ export default function ProfileScreen() {
     };
 
     const pickImage = async () => {
-        // No permissions request is necessary for launching the image library
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            quality: 1,
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 1,
         });
-
-        console.log(result);
-
+      
         if (!result.canceled) {
-            setImage(result.assets[0].uri);
-            await user?.setProfileImage({ file: result.assets[0].uri })
+          const uri = result.assets[0].uri;
+      
+          setImage(uri); // Update local display
+          await user?.setProfileImage({ file: uri }); // Upload to Clerk
+      
+          // After upload, refetch user data so we get the latest URL
+          await user?.reload();
+      
+          const imageUrl = user?.imageUrl; // Get latest Clerk-hosted image URL
+      
+          try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                id: user?.id,
+                username: user?.username,
+                firstname: user?.firstName,
+                lastname: user?.lastName,
+                email: user?.primaryEmailAddress?.emailAddress,
+                imageUrl: imageUrl
+              }),
+            });
+      
+            const data = await response.json();
+            console.log("Updated profile image in Mongo:", data);
+          } catch (error) {
+            console.error("Failed to update image in backend:", error);
+          }
         }
-    };
+      };
 
     const changeIcon = async () => {
         setIsEditing(!isEditing);
@@ -70,29 +109,25 @@ export default function ProfileScreen() {
                     firstname: user?.firstName,
                     lastname: user?.lastName,
                     email: user?.emailAddresses[0].emailAddress,
+                    image: image, 
                 }),
             });
+    
             const data = await response.json();
-
+    
             if (!response.ok) {
-                if (data.errors) {
-                    // Handle validation errors
-                    data.errors.forEach((error: any) => {
-                        console.error(`Validation error: ${error.message}`);
-                    });
-                } else {
-                    console.error('Error updating profile:', data);
-                }
+                console.error('Error updating profile:', data);
                 throw new Error('Failed to update profile');
             }
-
+    
             console.log('Profile updated successfully:', data);
         } catch (error) {
             console.error('Error updating profile:', error);
         }
-
+    
         await user?.update({ username: username });
-    }, [username, isEditing, user]);
+    }, [username, isEditing, user, image]); // 👈 image now in dependencies
+    
 
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
@@ -168,7 +203,9 @@ export default function ProfileScreen() {
                 </ThemedView>
                 <ThemedView style={styles.container}>
                     <ThemedText style={{ fontSize: 16 }}>Manage Patients</ThemedText>
-                    <Image source={require('@/assets/images/chevron-right.png')}></Image>
+                    <TouchableOpacity onPress={() => router.push("/(tabs)/profile/manage_patients")}>
+                        <Image source={require('@/assets/images/chevron-right.png')}></Image>
+                    </TouchableOpacity>
                 </ThemedView>
                 <ThemedView style={{ ...styles.container, flexDirection: 'column' }}>
                     <ThemedView style={{ flexDirection: 'row', backgroundColor: AppColors.OffWhite, alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 12 }}>

@@ -1,31 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TextInput } from 'react-native';
-import {AppColors} from '@/constants/Colors';
-import {ThemedText} from '@/components/ThemedText';
+import { View, StyleSheet, Image } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
 
-type ButtonProps = {
-  title?: string,
-  name?: string,
-  logo?: boolean,
-}
+type ScreenHeaderProps = {
+  title?: string;
+  name?: string | null;
+  logo?: boolean;
+  leftButton?: React.ReactNode;
+  rightButton?: React.ReactNode;
+};
 
-const ScreenHeader = ({ title, name = "", logo= false, } : ButtonProps) => {
+const ScreenHeader = ({ title, name, logo = false, leftButton, rightButton }: ScreenHeaderProps) => {
   return (
     <View style={styles.header}>
-      {logo? (
-      <View style={styles.logoHeader}>
-      <ThemedText style={styles.headerText}>{title} {name}</ThemedText>
-      <Image source={require('@/assets/images/app-logo.png')} 
-            resizeMode="contain"
-            style= {styles.image}></Image></View>) : (
-              <View style ={styles.noLogoHeader}>
-                <ThemedText style={{fontSize: 20, fontWeight: 'bold'}}>{title} {name}</ThemedText>
-              </View>
-            )}
+      <View style={styles.headerRow}>
+        <View style={styles.side}>{leftButton}</View>
+
+        <View style={styles.center}>
+          {logo ? (
+            <View style={styles.logoRow}>
+              <ThemedText style={styles.headerText}>{title} {name}</ThemedText>
+              <Image
+                source={require('@/assets/images/app-logo.png')}
+                resizeMode="contain"
+                style={styles.image}
+              />
+            </View>
+          ) : (
+            <ThemedText style={styles.headerText}>{title} {name}</ThemedText>
+          )}
+        </View>
+
+        <View style={styles.side}>{rightButton}</View>
+      </View>
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   header: {
@@ -34,47 +44,37 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
-    alignItems: 'center',
-    
   },
-  searchBarHeader: {
-    height: 110,
-    paddingTop: 30,
-    backgroundColor: 'transparent',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    alignItems: 'center',
-  },
-  logoHeader: {
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    width: '100%',
-    height: 30,
-    
+    paddingHorizontal: 10,
   },
-  noLogoHeader: {
+  side: {
+    width: 40,
+    alignItems: 'center',
     justifyContent: 'center',
-    height: 30,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 30,
+    color: 'black',
   },
   image: {
-    width: 50,
-    height: 50,
-    marginRight: 20,
-    position: "relative",
-    bottom: 24
+    width: 40,
+    height: 40,
+    marginLeft: 10,
   },
-  searchbar: {
-    backgroundColor: AppColors.LightBlue,
-    borderRadius: 12,
-    padding: 10,
-    width: '90%',
-    paddingLeft: 24,
-  }
 });
 
 export default ScreenHeader;
