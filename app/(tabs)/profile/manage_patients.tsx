@@ -4,7 +4,6 @@ import { AppColors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
 import ScreenHeader from '@/components/ScreenHeader';
 import { ScrollView } from 'react-native';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import Modal from 'react-native-modal';
@@ -18,6 +17,7 @@ type Patient = {
   id: string;
   name: string;
   imageUrl?: any;
+  status: string;
 };
 
 export default function ManagePatients() {
@@ -28,9 +28,7 @@ export default function ManagePatients() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [email, setEmail] = useState('');
 
-  const toggleModal = () => {
-    setModalVisible(!isModalVisible);
-  };
+  const toggleModal = () => setModalVisible(!isModalVisible);
 
   const fetchPatients = async () => {
     try {
@@ -41,6 +39,7 @@ export default function ManagePatients() {
           id: patient._id,
           name: patient.firstname + ' ' + (patient.lastname || ''),
           imageUrl: patient.imageUrl ? { uri: patient.imageUrl } : require('@/assets/images/profile.png'),
+          status: patient.status || 'accepted',
         }));
         setPatients(formatted);
       }
@@ -68,6 +67,42 @@ export default function ManagePatients() {
     }
   };
 
+  const handleAccept = async (id: string) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/accept_connection/${id}/${user?.id}`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+      if (response.ok) {
+        Alert.alert('Success', 'Connection accepted');
+        fetchPatients();
+      } else {
+        throw new Error(result.message || 'Failed to accept connection');
+      }
+    } catch (error: any) {
+      console.error('Failed to accept connection:', error);
+      Alert.alert('Error', error.message || 'Failed to accept connection');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/reject_connection/${id}/${user?.id}`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+      if (response.ok) {
+        Alert.alert('Success', 'Connection rejected');
+        fetchPatients();
+      } else {
+        throw new Error(result.message || 'Failed to reject connection');
+      }
+    } catch (error: any) {
+      console.error('Failed to reject connection:', error);
+      Alert.alert('Error', error.message || 'Failed to reject connection');
+    }
+  };
+
   const connectPatient = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/patient/get_patient_by_email/?email=${email}`);
@@ -75,6 +110,7 @@ export default function ManagePatients() {
       const patient = await res.json();
       const response = await fetch(`${BACKEND_URL}/connect_patient_therapist/${patient._id}/${user?.id}`, {
         method: 'POST',
+        headers: { 'X-User-Role': 'therapist' }
       });
       const result = await response.json();
 
@@ -92,9 +128,7 @@ export default function ManagePatients() {
   };
 
   useEffect(() => {
-    if (user?.id) {
-      fetchPatients();
-    }
+    if (user?.id) fetchPatients();
   }, [user?.id]);
 
   const filteredPatients = patients.filter(p =>
@@ -104,28 +138,17 @@ export default function ManagePatients() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <LinearGradient
-        style={{ flex: 1, paddingTop: Platform.OS === 'ios' ? 50 : 0 }}
-        colors={[AppColors.OffWhite, AppColors.LightBlue]}
-      >
+      <LinearGradient style={{ flex: 1, paddingTop: Platform.OS === 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
         <ScreenHeader
           title="Manage Your Patients"
           leftButton={
             <TouchableOpacity onPress={() => router.push('/profile')}>
-              <Image
-                source={require('@/assets/images/chevron-left.png')}
-                style={{ width: 24, height: 24 }}
-                resizeMode="contain"
-              />
+              <Image source={require('@/assets/images/chevron-left.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           }
           rightButton={
             <TouchableOpacity onPress={toggleModal}>
-              <Image
-                source={require('@/assets/images/user-add-icon.png')}
-                style={{ width: 24, height: 24 }}
-                resizeMode="contain"
-              />
+              <Image source={require('@/assets/images/user-add-icon.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           }
         />
@@ -147,16 +170,26 @@ export default function ManagePatients() {
                 <Image source={patient.imageUrl} style={styles.patientImage} />
                 <ThemedText style={styles.patientName}>{patient.name}</ThemedText>
               </View>
-              <LinearGradient
-                colors={["#E91313", "#EB9BD0"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={styles.removeButtonGradient}
-              >
-                <TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(patient.id)}>
-                  <ThemedText style={styles.removeButtonText}>Remove</ThemedText>
-                </TouchableOpacity>
-              </LinearGradient>
+              {patient.status === 'pending' ? (
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <LinearGradient colors={["#B39DDB", "#81D4FA"]} style={styles.removeButtonGradient}>
+                    <TouchableOpacity style={styles.removeButton} onPress={() => handleAccept(patient.id)}>
+                      <ThemedText style={styles.removeButtonText}>Accept</ThemedText>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                  <LinearGradient colors={["#E91313", "#EB9BD0"]} style={styles.removeButtonGradient}>
+                    <TouchableOpacity style={styles.removeButton} onPress={() => handleReject(patient.id)}>
+                      <ThemedText style={styles.removeButtonText}>Reject</ThemedText>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                </View>
+              ) : (
+                <LinearGradient colors={["#E91313", "#EB9BD0"]} style={styles.removeButtonGradient}>
+                  <TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(patient.id)}>
+                    <ThemedText style={styles.removeButtonText}>Remove</ThemedText>
+                  </TouchableOpacity>
+                </LinearGradient>
+              )}
             </View>
           ))}
         </ScrollView>
