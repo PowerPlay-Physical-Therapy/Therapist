@@ -24,6 +24,8 @@ import UploadCustomVideo from "./index";
 import * as VideoThumbnails from "expo-video-thumbnails";
 import * as FileSystem from 'expo-file-system';
 import { Video, ResizeMode } from 'expo-av';
+import * as mime from 'mime';
+import { Buffer } from 'buffer';
 import aws from 'aws-sdk'
 
 
@@ -58,6 +60,7 @@ const s3 = new aws.S3({
     signatureVersion: 'v4'  
 });
 
+global.Buffer = global.Buffer || Buffer;
 
 
 export default function CustomRoutineScreen() {
@@ -102,10 +105,11 @@ export default function CustomRoutineScreen() {
             if (result.canceled || !result.assets.length) return null;
 
             const videoFile = result.assets[0];
+                        
             return {
             uri: videoFile.uri,
             name: videoFile.fileName || videoFile.uri.split('/').pop() || 'Unknown Video',
-            type: videoFile.mimeType || 'video/quicktime',
+            type: videoFile.mimeType || 'video/quicktime' || 'video/mp4',
             };
         } catch (err) {
             console.error('Error picking video:', err);
@@ -145,8 +149,6 @@ export default function CustomRoutineScreen() {
         selected: { uri: string; name: string; type: string }
     ) => {
         try {
-        // urlData
-        console.log("hi")
 
         let uploadBody: BodyInit;
         if (Platform.OS === 'web') {
@@ -158,18 +160,17 @@ export default function CustomRoutineScreen() {
             });
             const binaryData = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
             uploadBody = binaryData;
+            // const fileUri = selected.uri;
+            // const fileBuffer = await FileSystem.readAsStringAsync(fileUri, {
+            //   encoding: FileSystem.EncodingType.Base64,
+            // });
+          
+            // uploadBody = Buffer.from(fileBuffer, 'base64');
+          
         }
         
-
-        // console.log("Check")
         const { uploadURL, imageName } = await generateUploadURL();
-        // console.log("Check1")
-        // const base64String = await FileSystem.readAsStringAsync(selected.uri, {
-        //     encoding: FileSystem.EncodingType.Base64,
-        // });
-    
-        // const binaryData = Uint8Array.from(atob(base64String), char => char.charCodeAt(0));
-    
+
         const response = await fetch(uploadURL, {
             method: 'PUT',
             headers: {
@@ -177,22 +178,40 @@ export default function CustomRoutineScreen() {
             },
             body: uploadBody,
         });
+
     
         if (!response.ok) throw new Error('Failed to upload video');
     
         const publicUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${imageName}`;
     
         // Generate thumbnail
-        const thumbnail = await VideoThumbnails.getThumbnailAsync(selected.uri, {
-            time: 1500,
-        });
+        let thumbnail: { uri: string } | null = null;
+
+        if (Platform.OS !== 'web') {
+            try {
+                thumbnail = await VideoThumbnails.getThumbnailAsync(selected.uri, {
+                    time: 1500,
+                });
+            } catch (e) {
+                console.error('Failed to generate thumbnail:', e);
+                thumbnail = null;
+            }
+        } else {
+            try {
+                const thumbnailUri = await generateWebThumbnail(selected.uri);
+                thumbnail = { uri: thumbnailUri };
+            } catch (e) {
+                console.error('Failed to generate thumbnail (web):', e);
+                thumbnail = null;
+            }
+        }
     
         // Save video & thumbnail info to UI state
         setExerciseMedia((prev) => ({
             ...prev,
             [exerciseId]: {
-            videoUrl: publicUrl,
-            thumbnailUrl: thumbnail.uri,
+                videoUrl: publicUrl,
+                thumbnailUrl: thumbnail?.uri || '',
             },
         }));
     
@@ -200,7 +219,7 @@ export default function CustomRoutineScreen() {
         setExercises((prev) => {
             const updated = [...prev];
             updated[exerciseIndex].video_url = publicUrl;
-            updated[exerciseIndex].thumbnail_url = thumbnail.uri;
+            updated[exerciseIndex].thumbnail_url = thumbnail?.uri || '';
             return updated;
         });
     
@@ -218,38 +237,44 @@ export default function CustomRoutineScreen() {
         }
     };      
   
-
-    // generate thumbnail for video
-    const generateThumbnail = async (exerciseId: string, videoUri: string) => {
-        try {
-            const thumbnail = await VideoThumbnails.getThumbnailAsync(videoUri, {
-                time: 15000,
-            });
-
-            setExercises((prev) => {
-                const updated = [...prev];
-                const index = updated.findIndex(ex => ex._id === exerciseId);
-                if (index !== -1) {
-                  updated[index].thumbnail_url = thumbnail.uri;
-                }
-                return updated;
-            });
-              
-        } catch (e) {
-            console.warn(e);
-        }
+    // generate thumbnail for web platform
+    const generateWebThumbnail = async (videoUrl: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const video = document.createElement('video');
+          video.crossOrigin = 'anonymous';
+          video.src = videoUrl;
+          video.muted = true;
+          video.currentTime = 1;
+      
+          video.onloadeddata = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+      
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject('Could not get canvas context');
+              return;
+            }
+      
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const thumbnailDataUrl = canvas.toDataURL('image/jpeg');
+            resolve(thumbnailDataUrl);
+          };
+      
+          video.onerror = (e) => {
+            reject('Error loading video for thumbnail generation');
+          };
+        });
     };
     
-
-
-
 
     // appends new blank exercise
     const addExercise = () => {
         setExercises((prevExercises) => [
             ...prevExercises,
             {
-                _id: `${Date.now()}`,
+                _id: "",
                 title: "",
                 category: "",
                 description: "",
@@ -278,78 +303,94 @@ export default function CustomRoutineScreen() {
     };
 
 
-
-
     // create new routine
     const createRoutine = async () => {
         try {
-          if (!name || !category) {
-            setError('Please enter a routine name and select a category.');
-            return;
-          }
-      
-          // create all exercises
-          const createdExerciseIds: string[] = [];
-      
-          for (const exercise of exercises) {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_exercise`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                // _id: exercise._id || undefined,
-                reps: exercise.reps,
-                hold: exercise.hold,
-                sets: exercise.sets,
-                frequency: exercise.frequency,
-                description: exercise.description,
-                thumbnail_url: exercise.thumbnail_url,
-                video_url: exercise.video_url,
-                title: exercise.title,
-                category: exercise.category,
-                subcategory: exercise.subcategory,
+            if (!name || !category) {
+                setError('Please enter a routine name and select a category.');
+                return;
+            }
 
-              }),
+            console.log('Backend URL:', process.env.EXPO_PUBLIC_BACKEND_URL);
+        
+            // create all exercises
+            const updatedExercises = [...exercises];
+
+            for (let i = 0; i < updatedExercises.length; i++) {
+                const exercise = updatedExercises[i];
+            
+      
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_exercise`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reps: exercise.reps,
+                    hold: exercise.hold,
+                    sets: exercise.sets,
+                    frequency: exercise.frequency,
+                    description: exercise.description,
+                    thumbnail_url: exercise.thumbnail_url,
+                    video_url: exercise.video_url,
+                    title: exercise.title,
+                    category: category,
+                    subcategory: exercise.subcategory,
+
+                    }),
+                });
+
+                console.log("Uploading Exercise:", JSON.stringify({
+                    reps: exercise.reps,
+                    hold: exercise.hold,
+                    sets: exercise.sets,
+                    frequency: exercise.frequency,
+                    description: exercise.description,
+                    thumbnail_url: exercise.thumbnail_url,
+                    video_url: exercise.video_url,
+                    title: exercise.title,
+                    category: category,
+                    subcategory: exercise.subcategory,
+                }, null, 2));
+                
+        
+                const data = await response.json();
+                if (!response.ok) {
+                throw new Error(data.detail || 'Failed to create exercise');
+                }
+        
+                console.log("Created exercise with ID:", data._id);
+                updatedExercises[i]._id = data._id;
+            };
+            setExercises(updatedExercises);
+      
+        
+            console.log("Created exercise IDs before creating routine:", updatedExercises.map(ex => ({ _id: ex._id })));
+            console.log('Routine API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`);
+
+            // Step 2: Create routine with exercise IDs
+            const routineResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    // exercises: createdExerciseIds,
+                    exercises: updatedExercises.map(ex => ({ _id: ex._id })),
+                }),
             });
       
-            const data = await response.json();
-            if (!response.ok) {
-              throw new Error(data.detail || 'Failed to create exercise');
+            const routineData = await routineResponse.json();
+      
+            if (!routineResponse.ok) {
+                throw new Error(routineData.detail || 'Failed to create routine');
             }
       
-            console.log(`Created exercise with ID: ${data._id}`);
-            createdExerciseIds.push(data._id);
-          }
-      
-        //   const routineId = Date.now().toString();
-
-          console.log('Routine API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`);
-
-          // Step 2: Create routine with exercise IDs
-          const routineResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-            //   _id: routineId,
-              name: name,
-              exercises: createdExerciseIds.map((id) => ({ _id: id })),
-            }),
-          });
-      
-          const routineData = await routineResponse.json();
-      
-          if (!routineResponse.ok) {
-            throw new Error(routineData.detail || 'Failed to create routine');
-          }
-      
-          console.log('Routine created successfully:', routineData);
-          router.push('/');
+            console.log('Routine created successfully:', routineData);
+            router.push('/');
       
         } catch (err) {
-          console.error('Routine creation error:', err);
-          setError('Failed to create routine. Please try again.');
+            console.error('Routine creation error:', err);
+            setError('Failed to create routine. Please try again.');
         }
-      };
-      
+    };
       
     
 
