@@ -13,8 +13,9 @@ import { Collapsible } from '@/components/Collapsible';
 import { useEffect } from 'react';
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import * as React from 'react';
-import { Text, View, FlatList, TextInput, Button, TouchableOpacity } from 'react-native';
+import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol.ios';
+
 
 import { useSignIn } from "@clerk/clerk-expo";
 import { Image, Platform, SafeAreaView, StyleSheet } from "react-native";
@@ -26,47 +27,36 @@ import { Video, ResizeMode } from 'expo-av';
 import aws from 'aws-sdk'
 
 
+// define exercise structure
 interface Exercise {
     _id: string;
-    category: string;
-    description: string;
-    frequency: number;
-    hold: number;
     reps: number;
+    hold: number;
     sets: number;
-    subcategory: string;
+    frequency: number;
+    description: string;
     thumbnail_url: string;
-    title: string;
     video_url: string;
+    title: string;
+    category: string;
+    subcategory: string;
 }
 
 
-const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID
-const AWS_SECRET_KEY = process.env.AWS_SECRET_KEY_ID
-const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME
-const S3_REGION = process.env.AWS_REGION
+// aws s3 credentials
+const AWS_ACCESS_KEY = process.env.EXPO_PUBLIC_AWS_ACCESS_KEY_ID
+const AWS_SECRET_KEY = process.env.EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY
+const S3_BUCKET = "custom-exercise-vids"
+const S3_REGION = "us-east-2"
 
+
+// initialize
 const s3 = new aws.S3({
     region: S3_REGION,  
     accessKeyId: AWS_ACCESS_KEY,  
-    secretAccessKey: AWS_SECRET_KEY, 
+    secretAccessKey: AWS_SECRET_KEY,
     signatureVersion: 'v4'  
 });
-
-
-
-async function generateUploadURL() {
-    const imageName = `${Date.now()}.mov`;
-  
-    const params = ({
-      Bucket: S3_BUCKET_NAME,
-      Key: imageName,
-      Expires: 60
-    })
-    
-    const uploadURL = await s3.getSignedUrlPromise('putObject', params)
-    return {uploadURL}
-}
 
 
 
@@ -74,7 +64,7 @@ export default function CustomRoutineScreen() {
     const { isSignedIn } = useAuth();
     const { user, isLoaded } = useUser();
     const router = useRouter();
-    
+   
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
     const [video, setVideo] = useState<{ uri: string; name: string; type: string } | null>(null);
@@ -83,196 +73,185 @@ export default function CustomRoutineScreen() {
     const [error, setError] = useState<string | null>(null);
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [selectedVideoUri, setSelectedVideoUri] = useState<string | null>(null);
-
-    const [isTabVisible, setIsTabVisible] = useState(true);
-    const [activeTab, setActiveTab] = useState(0);
+    const [exerciseMedia, setExerciseMedia] = useState<Record<string, {
+        videoUrl: string;
+        thumbnailUrl: string;
+      }>>({});
+      
 
     const local = useLocalSearchParams();
     const uri = local.videoUri?.toString();
     const localThumbnail = local.thumbnailUri?.toString();
     const userId = String(user?.id);
     const [text, onChangeText] = useState("");
-
-
-    // handle video upload
-    async function UploadCustomVideo(file: File, exerciseId: string) {
-        try {
-            // fetch pre-signed URL from backend
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/upload_custom_video`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    exercise_id: exerciseId,
-                    filename: file.name,
-                    content_type: file.type || "video/mp4" 
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Pre-signed URl fetch failed");
-            }
-
-            // extract URL from response
-            const { presigned_url, video_url } = await response.json();
-
-            console.log("Presigned URL:", presigned_url);
-
-            // upload video to S3 bucket
-            const uploadResponse = await fetch(presigned_url, {
-                method: "PUT",
-                body: file,
-                headers: { "Content-Type": file.type }
-            });
-
-            if (!uploadResponse.ok) {
-                throw new Error("Upload video to S3 failed");
-            }
-
-            // save uploaded video URL
-            setVideoUrl(video_url);
-            console.log("Video upload successful");
-            return video_url;
-
-        } catch (err) {
-            setError("Uploading unsuccessful");
-            console.error("Error uploading video:", err);
-            return null;
-        }
-    }
-
-
-    // allows picking video from device
-    const uploadVideo = async (index: number) => {
+    
+      
+    // pick a video from device
+    const uploadVideo = async (): Promise<{
+    uri: string;
+    name: string;
+    type: string;
+    } | null> => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-                allowsEditing: true,
-                quality: 1,
+            mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+            allowsEditing: true,
+            quality: 1,
             });
-    
-            if (result.canceled || !result.assets.length) return;
-            const videoFile = result.assets[0]; // extract the video file from the result
-            const videoName = videoFile.uri.split('/').pop(); // extract name from the URI 
 
-            if (!videoFile) return;
-    
-            // fetch the pre-signed URL from the backend
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/upload_custom_video/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    exercise_id: exercises[index]._id,
-                    filename: videoFile.fileName, 
-                    content_type: videoFile.type || 'video/mp4', 
-                }),
-            });
-    
-            if (!response.ok) {
-                throw new Error('Failed to get pre-signed URL');
-            }
-    
-            const { presigned_url, video_url } = await response.json();
-            console.log("Pre-signed URL:", presigned_url);
-            console.log("Video URL:", video_url);
+            if (result.canceled || !result.assets.length) return null;
 
-            // upload the video to S3 using the pre-signed URL
-            const fileBlob = await fetch(videoFile.uri).then(res => res.blob());
-    
-            const uploadResponse = await fetch(presigned_url, {
-                method: 'PUT',
-                headers: { 'Content-Type': videoFile.type || 'video/mp4' }, 
-                body: fileBlob,
-            });
-    
-            if (!uploadResponse.ok) {
-                throw new Error('Video upload failed');
-            }
-    
-            // update the exercise with the video URL
-            const updatedExercises = [...exercises];
-            updatedExercises[index].video_url = video_url;
-            setExercises(updatedExercises);
-    
-            // set the URI for preview
-            setSelectedVideoUri(videoFile.uri);
-    
-            console.log('Video uploaded successfully');
+            const videoFile = result.assets[0];
+            return {
+            uri: videoFile.uri,
+            name: videoFile.fileName || videoFile.uri.split('/').pop() || 'Unknown Video',
+            type: videoFile.mimeType || 'video/quicktime',
+            };
         } catch (err) {
-            console.error('Error uploading video:', err);
-            setError('Uploading unsuccessful');
+            console.error('Error picking video:', err);
+            setError('Failed to pick video');
+            return null;
         }
     };
-    
-    
 
+   
+    // generate s3 pre-signed upload url
     async function generateUploadURL() {
-        const imageName = `${Date.now()}.mov`;
-      
-        const params = ({
-          Bucket: S3_BUCKET_NAME,
-          Key: imageName,
-          Expires: 60
-        })
-        
-        const uploadURL = await s3.getSignedUrlPromise('putObject', params)
-        return {uploadURL}
-    }
-
-
-
-    // video upload to S3
-    // const uploadToS3 = async (file: File) => {
-    //     try {
-    //         const presignedUrl = await generateUploadURL();
-        
-    //         const uploadResponse = await fetch(presignedUrl, {
-    //             method: "PUT",
-    //             headers: { "Content-Type": file.type },
-    //             body: file
-    //         });
-        
-    //         if (!uploadResponse.ok) throw new Error("Upload failed");
-        
-    //         console.log("Upload successful!");
-    //         return presignedUrl.split("?")[0];
-    //     } catch (err) {
-    //         console.log("Error uploading to S3:", err);
-    //         return null;
-    //     }
-    // };    
-
-
-
-    const generateThumbnail = async (videoUri: string) => {
+        const imageName = `${Date.now()}.mov`; // Ensure that you're passing a valid file name
+   
+        const params = {
+            Bucket: S3_BUCKET,
+            Key: imageName,
+            Expires: 60, // expires in 60 secs
+        };
+   
+        console.log("hello")
         try {
-          const url = await VideoThumbnails.getThumbnailAsync(
-            videoUri,
-            {
-              time: 15000,
-            }
-          );
-          console.log("Thumbnail URL:", url);
-          setThumbnail(url.uri);
-        } catch (e) {
-          console.warn(e);
+            console.log("bye")
+            const uploadURL = await s3.getSignedUrlPromise('putObject', params);
+            console.log('Generated upload URL:', uploadURL); 
+            return { uploadURL, imageName }; // key to upload final url
+        } catch (error) {
+            console.error('Error generating upload URL:', error);
+            throw error;
+        }
+    }
+   
+
+    // upload, generate thumbnail, and update state
+    const handleUpload = async (
+        exerciseId: string,
+        exerciseIndex: number,
+        selected: { uri: string; name: string; type: string }
+    ) => {
+        try {
+        // urlData
+        console.log("hi")
+
+        let uploadBody: BodyInit;
+        if (Platform.OS === 'web') {
+            const response = await fetch(selected.uri);
+            uploadBody = await response.blob();
+        } else {
+            const base64String = await FileSystem.readAsStringAsync(selected.uri, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+            const binaryData = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
+            uploadBody = binaryData;
+        }
+        
+
+        // console.log("Check")
+        const { uploadURL, imageName } = await generateUploadURL();
+        // console.log("Check1")
+        // const base64String = await FileSystem.readAsStringAsync(selected.uri, {
+        //     encoding: FileSystem.EncodingType.Base64,
+        // });
+    
+        // const binaryData = Uint8Array.from(atob(base64String), char => char.charCodeAt(0));
+    
+        const response = await fetch(uploadURL, {
+            method: 'PUT',
+            headers: {
+            'Content-Type': selected.type,
+            },
+            body: uploadBody,
+        });
+    
+        if (!response.ok) throw new Error('Failed to upload video');
+    
+        const publicUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${imageName}`;
+    
+        // Generate thumbnail
+        const thumbnail = await VideoThumbnails.getThumbnailAsync(selected.uri, {
+            time: 1500,
+        });
+    
+        // Save video & thumbnail info to UI state
+        setExerciseMedia((prev) => ({
+            ...prev,
+            [exerciseId]: {
+            videoUrl: publicUrl,
+            thumbnailUrl: thumbnail.uri,
+            },
+        }));
+    
+        // attach video & thumbnail url to exercise
+        setExercises((prev) => {
+            const updated = [...prev];
+            updated[exerciseIndex].video_url = publicUrl;
+            updated[exerciseIndex].thumbnail_url = thumbnail.uri;
+            return updated;
+        });
+    
+        } catch (err) {
+        console.error('Upload error:', err);
+        setError('Upload failed');
         }
     };
 
-    useEffect(() => {
-        if (videoUrl) {
-            generateThumbnail(videoUrl);
+    // combine picking & uploading video
+    const onUploadPress = async (exerciseId: string, index: number) => {
+        const selected = await uploadVideo();
+        if (selected) {
+          await handleUpload(exerciseId, index, selected);
         }
-    }, [videoUrl])
+    };      
+  
+
+    // generate thumbnail for video
+    const generateThumbnail = async (exerciseId: string, videoUri: string) => {
+        try {
+            const thumbnail = await VideoThumbnails.getThumbnailAsync(videoUri, {
+                time: 15000,
+            });
+
+            setExercises((prev) => {
+                const updated = [...prev];
+                const index = updated.findIndex(ex => ex._id === exerciseId);
+                if (index !== -1) {
+                  updated[index].thumbnail_url = thumbnail.uri;
+                }
+                return updated;
+            });
+              
+        } catch (e) {
+            console.warn(e);
+        }
+    };
+    
 
 
 
+
+    // appends new blank exercise
     const addExercise = () => {
         setExercises((prevExercises) => [
             ...prevExercises,
-            { 
-                _id: `${Date.now()}`, 
-                title: "", 
-                category: "", 
+            {
+                _id: `${Date.now()}`,
+                title: "",
+                category: "",
                 description: "",
                 frequency: 0,
                 hold: 0,
@@ -285,98 +264,231 @@ export default function CustomRoutineScreen() {
         ]);
     };
 
+    // updates exercise fields
     const updateExercise = (index: number, key: string, value: string | number) => {
         const updatedExercises = [...exercises];
         updatedExercises[index] = { ...updatedExercises[index], [key]: value };
         setExercises(updatedExercises);
     };
-    
+   
 
+    // deletes an exercise by id
     const removeExercise = (id: string) => {
         setExercises((prevExercises) => prevExercises.filter(ex => ex._id !== id));
     };
-    
-
 
 
 
 
     // create new routine
     const createRoutine = async () => {
-        if(!name || !category || exercises.length === 0) return;
-
         try {
+          if (!name || !category) {
+            setError('Please enter a routine name and select a category.');
+            return;
+          }
+      
+          // create all exercises
+          const createdExerciseIds: string[] = [];
+      
+          for (const exercise of exercises) {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_exercise`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                // _id: exercise._id || undefined,
+                reps: exercise.reps,
+                hold: exercise.hold,
+                sets: exercise.sets,
+                frequency: exercise.frequency,
+                description: exercise.description,
+                thumbnail_url: exercise.thumbnail_url,
+                video_url: exercise.video_url,
+                title: exercise.title,
+                category: exercise.category,
+                subcategory: exercise.subcategory,
 
-            // send request to create routine
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, category, exercises }),
+              }),
             });
-
+      
+            const data = await response.json();
             if (!response.ok) {
-                throw new Error("Create routine failed");
+              throw new Error(data.detail || 'Failed to create exercise');
             }
-                
-            console.log("Routine created successfully");
-            router.replace('/'); // navigate to home page
+      
+            console.log(`Created exercise with ID: ${data._id}`);
+            createdExerciseIds.push(data._id);
+          }
+      
+        //   const routineId = Date.now().toString();
 
+          console.log('Routine API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`);
+
+          // Step 2: Create routine with exercise IDs
+          const routineResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+            //   _id: routineId,
+              name: name,
+              exercises: createdExerciseIds.map((id) => ({ _id: id })),
+            }),
+          });
+      
+          const routineData = await routineResponse.json();
+      
+          if (!routineResponse.ok) {
+            throw new Error(routineData.detail || 'Failed to create routine');
+          }
+      
+          console.log('Routine created successfully:', routineData);
+          router.push('/');
+      
         } catch (err) {
-            console.error("Error creating routine:", err);
+          console.error('Routine creation error:', err);
+          setError('Failed to create routine. Please try again.');
         }
-    };
+      };
+      
+      
+    
 
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
+            <View style={{ flex: 1 }}>
+                <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 200 }]} showsVerticalScrollIndicator={false}>
+                    <TextInput style={styles.input} placeholder="Custom Routine Name" value={name} onChangeText={setName} />
+                    <TextInput style={styles.input} placeholder="Category" value={category} onChangeText={setCategory} /> 
+                    
+                    {exercises.map((exercise, index) => (
 
-            <View style={styles.form}>
-                <TextInput style={styles.input} placeholder="Custom Routine Name" value={name} onChangeText={setName} />
-                <TextInput style={styles.input} placeholder="Category" value={category} onChangeText={setCategory} /> 
-                
-                {exercises.map((exercise, index) => (
-                    <View key={index} style={styles.exerciseContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Exercise Name"
-                            value={exercise.title}
-                            onChangeText={(text) => {
-                                // const updatedExercises = [...exercises];
-                                // updatedExercises[index].title = text;
-                                // setExercises(updatedExercises);
-                                updateExercise(index, "title", text)
-                            }}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Description"
-                            value={exercise.description}
-                            onChangeText={(text) => updateExercise(index, "description", text)}
-                        />
-                        <Button
-                        title="Upload Video"
-                        onPress={() => uploadVideo(index)}
-                        />
-                        {exercise.video_url && <Text style={styles.fileName}>Selected: {exercise.video_url}</Text>}
+                        <View key={exercise._id} style={styles.exerciseBlock}>
+                            <View style={styles.exerciseContainer}>
 
-                        {/* Display video preview only if a video is selected */}
-                        {selectedVideoUri && (
-                            <View style={styles.previewContainer}>
-                                <Text>Video Selected:</Text>
-                                <Video
-                                    source={{ uri: selectedVideoUri }}
-                                    useNativeControls
-                                    resizeMode={ResizeMode.CONTAIN}
-                                    style={styles.videoPreview}
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Text style={styles.label}>Exercise Name:</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={exercise.title}
+                                        onChangeText={(text) => updateExercise(index, "title", text)}
+                                    />
+                                </View>
+
+                                {/* Display video preview only if a video is selected */}
+                                {exercise.video_url && (
+                                    <View style={styles.previewContainer}>
+                                        <Text>Video Selected:</Text>
+                                        {video && <Text style={styles.fileName}>Selected: {video.name}</Text>}
+                                        <Video
+                                            source={{ uri: exercise.video_url }}
+                                            useNativeControls
+                                            resizeMode={ResizeMode.CONTAIN}
+                                            style={styles.videoPreview}
+                                        />
+                                        <View style={styles.separator} />
+                                    </View>
+                                )}
+                                
+                                <View style={styles.inputContainer}>
+
+                                    <View style={styles.rowContainer}>
+                                        <View style={styles.column}>
+                                            <Text style={styles.label}>Reps:</Text>
+                                            <TextInput
+                                                style={styles.smallInput}
+                                                value={String(exercise.reps)}
+                                                keyboardType='numeric'
+                                                onChangeText={(text) => updateExercise(index, "reps", Number(text))}
+                                            />
+                                            <Text style={styles.label}>Sets:</Text>
+                                            <TextInput
+                                                style={styles.smallInput}
+                                                value={String(exercise.sets)}
+                                                keyboardType='numeric'
+                                                onChangeText={(text) => updateExercise(index, "sets", Number(text))}
+                                            />
+                                        </View>
+
+                                        <View style={styles.column}>
+                                            <Text style={styles.label}>Hold:</Text>
+                                            <TextInput
+                                                style={styles.smallInput}
+                                                value={String(exercise.hold)}
+                                                keyboardType='numeric'
+                                                onChangeText={(text) => updateExercise(index, "hold", Number(text))}
+                                            />
+                                            <Text>Seconds</Text>
+                                            <Text style={styles.label}>Frequency:</Text>
+                                            <TextInput
+                                                style={styles.smallInput}
+                                                value={String(exercise.frequency)}
+                                                keyboardType='numeric'
+                                                onChangeText={(text) => updateExercise(index, "frequency", Number(text))}
+                                            />
+                                            <Text>x/week</Text>
+                                        </View>
+                                    </View>
+
+                                </View>
+                                
+                                <Text style={styles.label}>Description:</Text>
+                                <TextInput
+                                    style={styles.descriptionInput}
+                                    value={exercise.description}
+                                    onChangeText={(text) => updateExercise(index, "description", text)}
+                                    multiline
                                 />
+                                
+                                <LinearGradient
+                                    colors={[AppColors.Purple, AppColors.Blue]}
+                                    style={styles.button}
+                                >
+                                    <TouchableOpacity
+                                        style={styles.buttonInner}
+                                        onPress={() => onUploadPress(exercise._id, index)} 
+                                    >
+                                    <ThemedText style={styles.buttonText}>Upload Video</ThemedText>
+                                    </TouchableOpacity>
+                                        
+                                </LinearGradient>
                             </View>
-                        )}
-                    </View>
-                ))}
-                {/* {/* <Button title="Upload Video" onPress={uploadVideo} /> */}
-                {video && <Text style={styles.fileName}>Selected: {video.name}</Text>} 
-                <Button title="+" onPress={addExercise} />
-                <Button title="Create Routine" onPress={createRoutine} />
-                {error && <Text style={styles.errorText}>{error}</Text>}
+
+                        <TouchableOpacity style={styles.addButton} onPress={addExercise}>
+                                <Text style={styles.addButtonText}>+</Text>
+                        </TouchableOpacity>
+                        
+                        </View>
+
+                    ))}
+
+
+                    {/* {/* <Button title="Upload Video" onPress={uploadVideo} /> */}
+                    {/* {video && <Text style={styles.fileName}>Selected: {video.name}</Text>}  */}
+                    <View style={{ height: 150 }} />
+
+                </ScrollView>
+                
+                <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
+
+                    <TouchableOpacity style={styles.addButton} onPress={addExercise}>
+                            <Text style={styles.addButtonText}>+</Text>
+                    </TouchableOpacity>
+
+                    {/* <Button title="+" onPress={addExercise} /> */}
+                    <LinearGradient
+                        colors={[AppColors.Purple, AppColors.Blue]}
+                        style={styles.createButton}
+                    >
+                        <TouchableOpacity
+                            style={styles.buttonInner}
+                            onPress={() => createRoutine()} 
+                        >
+                        <ThemedText style={styles.buttonText}>Create Routine</ThemedText>
+                        </TouchableOpacity>
+                    </LinearGradient>
+
+                    {error && <Text style={styles.errorText}>{error}</Text>}
+                </View>
             </View>
         </LinearGradient>
     );
@@ -384,13 +496,57 @@ export default function CustomRoutineScreen() {
 
 
 const styles = StyleSheet.create({
+    buttonInner: {
+        padding: 12,
+        alignItems: 'center',
+        borderRadius: 20,
+    },
+
+    buttonText: {
+        fontWeight: 'bold',
+        color: 'white',
+    },
+
+    button: {
+        borderRadius: 25,
+        width: '50%',
+        marginTop: 10,
+        marginBottom: 10,
+        alignItems: 'center',
+        alignSelf: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+
+    createButton: {
+        position: 'absolute',  // Fixed at the bottom of the page
+        bottom: 20,
+        left: '50%',
+        transform: [{ translateX: '-50%' }],
+        marginBottom: 20,
+        width: '50%',
+        borderRadius: 25,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        alignItems: 'center',
+        alignSelf: 'center',
+    },
+
     container: { 
         flex: 1, 
         padding: 20 
     },
 
     form: {
-        marginTop: 20
+        marginTop: 20,
+        flex: 1,
+        paddingBottom: 150,
     },
 
     fileName: {
@@ -406,6 +562,11 @@ const styles = StyleSheet.create({
         height: '100%',
     },
 
+    label: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 10,
+    },
 
     text: {
         fontSize: 24,
@@ -436,10 +597,23 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
+    exerciseBlock: {
+        marginBottom: 30,
+    },
+
     exerciseContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        backgroundColor: AppColors.OffWhite,
+        padding: 15,
+        borderRadius: 10,
         marginTop: 15,
+        marginBottom: 15,
+        marginLeft: 15,
+        marginRight: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
 
     exerciseList: {
@@ -480,6 +654,16 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
 
+    rowContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+
+    column: {
+        flex: 1,
+        marginRight: 10,
+    },
+
     previewContainer: {
         marginTop: 10,
         alignItems: 'center',
@@ -503,18 +687,28 @@ const styles = StyleSheet.create({
     },
 
     addButton: {
-        position: "absolute",
-        bottom: 20,
-        right: 20,
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        // position: 'absolute',
+        // bottom: 90,
+        // left: '50%',
+        // transform: [{ translateX: -30 }],
+        // right: 20,
+        marginTop: 10,
+        width: 60,
+        height: 60,
+        // marginTop: 10,
+        marginVertical: 20,
+        borderRadius: 30,
         justifyContent: "center",
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: 'black',
         shadowColor: "black",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 2,
+        elevation: 5,
+        zIndex: 1000,
+        alignSelf: 'center',
     },
 
     addButtonText: {
@@ -524,14 +718,42 @@ const styles = StyleSheet.create({
     },
 
     input: {
+        borderWidth: 1,
+        borderColor: "#ccc",
         borderRadius: 25,
         marginTop: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        marginLeft: 10,
+        marginRight: 10,
         elevation: 5,
-        padding: 15,
+        padding: 10,
+    },
+
+    smallInput: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        width: 80,
+        borderRadius: 25,
+        marginLeft: 10,
+        marginTop: 10,
+        elevation: 5,
+        padding: 10,
+    },
+
+    descriptionInput: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        padding: 10,
+        height: 100,
+        textAlignVertical: "top",
+        marginTop: 10,
+        marginBottom: 10,
+    },
+
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
     },
 
     errorText: {
