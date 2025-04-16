@@ -397,7 +397,7 @@ export default function CustomRoutineScreen() {
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <View style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 200 }]} showsVerticalScrollIndicator={false}>
+                <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 250 }]} showsVerticalScrollIndicator={false}>
                     <TextInput style={styles.input} placeholder="Custom Routine Name" value={name} onChangeText={setName} />
                     <TextInput style={styles.input} placeholder="Category" value={category} onChangeText={setCategory} /> 
                     
@@ -494,28 +494,20 @@ export default function CustomRoutineScreen() {
                                 </LinearGradient>
                             </View>
 
-                        <TouchableOpacity style={styles.addButton} onPress={addExercise}>
-                                <Text style={styles.addButtonText}>+</Text>
-                        </TouchableOpacity>
-                        
+
                         </View>
 
+                        
                     ))}
-
-
-                    {/* {/* <Button title="Upload Video" onPress={uploadVideo} /> */}
-                    {/* {video && <Text style={styles.fileName}>Selected: {video.name}</Text>}  */}
-                    <View style={{ height: 150 }} />
-
-                </ScrollView>
-                
-                <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
 
                     <TouchableOpacity style={styles.addButton} onPress={addExercise}>
                             <Text style={styles.addButtonText}>+</Text>
                     </TouchableOpacity>
 
-                    {/* <Button title="+" onPress={addExercise} /> */}
+                </ScrollView>
+                
+                <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
+
                     <LinearGradient
                         colors={[AppColors.Purple, AppColors.Blue]}
                         style={styles.createButton}
@@ -728,15 +720,9 @@ const styles = StyleSheet.create({
     },
 
     addButton: {
-        // position: 'absolute',
-        // bottom: 90,
-        // left: '50%',
-        // transform: [{ translateX: -30 }],
-        // right: 20,
         marginTop: 10,
         width: 60,
         height: 60,
-        // marginTop: 10,
         marginVertical: 20,
         borderRadius: 30,
         justifyContent: "center",
@@ -763,8 +749,8 @@ const styles = StyleSheet.create({
         borderColor: "#ccc",
         borderRadius: 25,
         marginTop: 10,
-        marginLeft: 10,
-        marginRight: 10,
+        marginLeft: 15,
+        marginRight: 15,
         elevation: 5,
         padding: 10,
     },
