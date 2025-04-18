@@ -384,6 +384,21 @@ export default function CustomRoutineScreen() {
             }
       
             console.log('Routine created successfully:', routineData);
+
+            if (user?.id && routineData.routine_id) {
+                const updateResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_custom_routines/${user.id}/${routineData.routine_id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+
+                const updateData = await updateResponse.json();
+                if (!updateResponse.ok) {
+                    console.error('Failed to update therapist with routine:', updateData);
+                } else {
+                    console.log('Routine linked to therapist successfully:', updateData);
+                }
+            }
+
             router.push('/');
       
         } catch (err) {
@@ -790,3 +805,22 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
 });
+
+// const routineId = routineData.inserted_id || routineData._id; // Adjust this depending on what your backend returns
+// const therapistId = user?.id;
+
+// if (routineId && therapistId) {
+//   const updateResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/update_custom_routines/${therapistId}/${routineId}`, {
+//     method: 'PUT',
+//     headers: { 'Content-Type': 'application/json' }
+//   });
+
+//   if (!updateResponse.ok) {
+//     throw new Error("Failed to update therapist with routine");
+//   }
+
+//   const updateData = await updateResponse.json();
+//   console.log("Therapist routine updated:", updateData);
+// } else {
+//   console.warn("Missing routineId or therapistId for update");
+// }
