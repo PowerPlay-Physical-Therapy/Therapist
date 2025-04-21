@@ -105,6 +105,7 @@ export default function signUP() {
                     firstname: firstName,
                     lastname: lastName,
                     email: emailAddress,
+                    
                   }),
                 });
               

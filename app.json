@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Patient",
-    "slug": "Patient",
+    "name": "Therapist",
+    "slug": "Therapist",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-logo.png",

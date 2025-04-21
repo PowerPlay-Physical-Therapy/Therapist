@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 
 type ScreenHeaderProps = {
@@ -8,18 +8,26 @@ type ScreenHeaderProps = {
   logo?: boolean;
   leftButton?: React.ReactNode;
   rightButton?: React.ReactNode;
+  streak?: boolean;
+  showLeft?: boolean;
+  showRight?: boolean;
 };
 
-const ScreenHeader = ({ title, name, logo = false, leftButton, rightButton }: ScreenHeaderProps) => {
+const {width: ScreenWidth} = Dimensions.get('window');
+
+const ScreenHeader = ({ title, name, logo = false, leftButton, rightButton, showLeft = false, showRight = false }: ScreenHeaderProps) => {
   return (
     <View style={styles.header}>
       <View style={styles.headerRow}>
-        <View style={styles.side}>{leftButton}</View>
 
-        <View style={styles.center}>
+        {showLeft &&
+        <View style={styles.side}>{leftButton}</View>}
+
+        <View style={showRight? styles.center : styles.centerAlt}>
           {logo ? (
             <View style={styles.logoRow}>
               <ThemedText style={styles.headerText}>{title} {name}</ThemedText>
+              
               <Image
                 source={require('@/assets/images/app-logo.png')}
                 resizeMode="contain"
@@ -30,8 +38,9 @@ const ScreenHeader = ({ title, name, logo = false, leftButton, rightButton }: Sc
             <ThemedText style={styles.headerText}>{title} {name}</ThemedText>
           )}
         </View>
-
-        <View style={styles.side}>{rightButton}</View>
+        
+        {showRight &&
+        <View style={styles.side}>{rightButton}</View>}
       </View>
     </View>
   );
@@ -44,12 +53,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+    width: ScreenWidth,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
+    width: '100%',
   },
   side: {
     width: 40,
@@ -57,23 +68,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   center: {
-    flex: 1,
+    width: '80%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerAlt: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'black',
+    marginLeft: 20,
+    marginRight: 20,
+
   },
   image: {
     width: 40,
     height: 40,
     marginLeft: 10,
+    marginBottom: 20,
   },
 });
 

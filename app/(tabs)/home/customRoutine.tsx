@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 // import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
@@ -13,10 +13,8 @@ import { Collapsible } from '@/components/Collapsible';
 import { useEffect } from 'react';
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import * as React from 'react';
-import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView } from 'react-native';
+import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol.ios';
-
-
 import { useSignIn } from "@clerk/clerk-expo";
 import { Image, Platform, SafeAreaView, StyleSheet } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
@@ -62,12 +60,15 @@ const s3 = new aws.S3({
 
 global.Buffer = global.Buffer || Buffer;
 
+const {width: ScreenWidth} = Dimensions.get('window');
+const {height: ScreenHeight} = Dimensions.get('window');
+
 
 export default function CustomRoutineScreen() {
+    
     const { isSignedIn } = useAuth();
     const { user, isLoaded } = useUser();
     const router = useRouter();
-   
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
     const [video, setVideo] = useState<{ uri: string; name: string; type: string } | null>(null);
@@ -81,7 +82,7 @@ export default function CustomRoutineScreen() {
         thumbnailUrl: string;
       }>>({});
       
-
+      
     const local = useLocalSearchParams();
     const uri = local.videoUri?.toString();
     const localThumbnail = local.thumbnailUri?.toString();
@@ -271,10 +272,11 @@ export default function CustomRoutineScreen() {
 
     // appends new blank exercise
     const addExercise = () => {
-        setExercises((prevExercises) => [
+        setExercises((prevExercises) => 
+            [
             ...prevExercises,
             {
-                _id: "",
+                _id: `${Date.now()}`,
                 title: "",
                 category: "",
                 description: "",
@@ -287,7 +289,9 @@ export default function CustomRoutineScreen() {
                 video_url: ""
             }
         ]);
+
     };
+
 
     // updates exercise fields
     const updateExercise = (index: number, key: string, value: string | number) => {
@@ -406,13 +410,15 @@ export default function CustomRoutineScreen() {
             setError('Failed to create routine. Please try again.');
         }
     };
-      
     
 
     return (
-        <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
+        <LinearGradient style={{ flex: 1}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <View style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 250 }]} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                onContentSizeChange={(contentWidth, contentHeight) => console.log(contentWidth, contentHeight)}
+                contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
+                    
                     <TextInput style={styles.input} placeholder="Custom Routine Name" value={name} onChangeText={setName} />
                     <TextInput style={styles.input} placeholder="Category" value={category} onChangeText={setCategory} /> 
                     
@@ -508,8 +514,6 @@ export default function CustomRoutineScreen() {
                                         
                                 </LinearGradient>
                             </View>
-
-
                         </View>
 
                         
@@ -518,7 +522,7 @@ export default function CustomRoutineScreen() {
                     <TouchableOpacity style={styles.addButton} onPress={addExercise}>
                             <Text style={styles.addButtonText}>+</Text>
                     </TouchableOpacity>
-
+                    
                 </ScrollView>
                 
                 <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
@@ -593,7 +597,6 @@ const styles = StyleSheet.create({
 
     form: {
         marginTop: 20,
-        flex: 1,
         paddingBottom: 150,
     },
 
@@ -644,12 +647,14 @@ const styles = StyleSheet.create({
     exerciseInfo: {
         flex: 1,
     },
-
     exerciseBlock: {
+        
         marginBottom: 30,
+        
     },
 
     exerciseContainer: {
+        
         backgroundColor: AppColors.OffWhite,
         padding: 15,
         borderRadius: 10,

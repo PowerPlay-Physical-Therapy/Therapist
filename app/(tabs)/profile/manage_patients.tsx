@@ -151,6 +151,8 @@ export default function ManagePatients() {
               <Image source={require('@/assets/images/user-add-icon.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           }
+          showLeft={true}
+          showRight={true}
         />
 
         <View style={styles.searchContainer}>
