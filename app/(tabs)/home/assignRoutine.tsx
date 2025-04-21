@@ -11,6 +11,7 @@ export default function AssignRoutineScreen() {
     const routineId = params.routineId as string;
     const therapistId = params.therapistId as string;
     const [patients, setPatients] = useState<any[]>([]);
+    const [assigned, setAssigned] = useState<any[]>([]);
     
     useEffect(() => {
         const fetchConnections = async() => {
@@ -26,11 +27,15 @@ export default function AssignRoutineScreen() {
 
             const data = await response.json();
             setPatients(data.connections);
+            setAssigned(new Array(data.connections.length).fill(false));
         } catch (error) {
             console.error('Error fetching connections:', error);
         }
     }
     fetchConnections();
+    
+
+    
 }, []);
 
     const assignRoutine = async (patientId: string) => {
@@ -43,25 +48,35 @@ export default function AssignRoutineScreen() {
         if (!response.ok) {
             throw new Error('Failed to assign routine');
         }
+        const data = await response.json();
+        if (data.message === "Routine already assigned to this patient!") {
+            Alert.alert('Routine already assigned to this patient');
+            return;
+        }
         console.log('Routine assigned successfully!');
         Alert.alert('Routine assigned successfully!');
     }
 
 
+
     return (
         <LinearGradient colors={[AppColors.OffWhite, AppColors.LightBlue]} style={{ flex: 1 }}>
-            <ScrollView style={{ flex: 1 }}>
+            <ScrollView style={{paddingTop: 12}}>
                       {patients.map((patient, index) => (
                         <View key={index} style={styles.patientItem}>
                           <View style={styles.patientInfo}>
-                            <Image source={patient.imageUrl} style={styles.patientImage} />
+                            <Image source={{uri: patient.imageUrl}} style={styles.patientImage} />
                             <ThemedText style={styles.patientName}>{patient.firstname} {patient.lastname}</ThemedText>
                           </View>
+                          
                             <LinearGradient colors={[AppColors.Purple, AppColors.Blue]} style={styles.removeButtonGradient}>
-                              <TouchableOpacity style={styles.button} onPress={() => assignRoutine(patient._id)}>
-                                <ThemedText style={styles.buttonText}>Assign</ThemedText>
-                              </TouchableOpacity>
-                            </LinearGradient>
+                            <TouchableOpacity style={styles.button} onPress={() => {assignRoutine(patient._id)}}>
+                              
+                              <ThemedText style={styles.buttonText}>Assign</ThemedText>
+                              
+                            </TouchableOpacity>
+                          </LinearGradient>
+                            
                         </View>
                       ))}
                     </ScrollView>
@@ -118,4 +133,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
       },
+      acceptedButtonGradient: {
+        borderRadius: 25,
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+
+      }
 })

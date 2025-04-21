@@ -18,6 +18,12 @@ export default function HomeLayout() {
                     backgroundColor: AppColors.OffWhite,
                 },
              }}/>
+             <Stack.Screen name="editRoutine" options={{
+                headerShown: true, headerBackTitle:'Back', title:'Custom Routine',
+                headerStyle: {
+                    backgroundColor: AppColors.OffWhite,
+                },
+             }}/>
         </Stack>
     );
 }

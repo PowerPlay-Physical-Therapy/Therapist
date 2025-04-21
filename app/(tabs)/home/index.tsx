@@ -23,6 +23,7 @@ import { Link, useRouter } from "expo-router";
 import * as React from "react";
 import { Text, View, FlatList } from "react-native";
 import { IconSymbol } from "@/components/ui/IconSymbol.ios";
+import capitalizeWords from "@/utils/capitalizeWords";
 
 export default function HomeScreen() {
   const { isSignedIn } = useAuth();
@@ -31,7 +32,7 @@ export default function HomeScreen() {
   const [routines, setRoutines] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { user, isLoaded } = useUser();
-  const [therapistId, setTherapistId] = useState<string | null>(null);
+  const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -42,7 +43,6 @@ export default function HomeScreen() {
       if (!user || !isLoaded) {
         return;
       }
-
       // Display user id
       const therapistId = user?.id;
       console.log("userid:", user?.id);
@@ -82,9 +82,9 @@ export default function HomeScreen() {
       }
     };
     fetchCustomRoutines();
-    updateUser();
   }, [isLoaded, user]);
 
+  /*
     const updateUser = async () => {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
         method: 'PUT',
@@ -105,7 +105,7 @@ export default function HomeScreen() {
         throw new Error('Failed to update user');
       }
       console.log('User updated successfully!');
-    }
+    } */
   
 
 
@@ -128,25 +128,26 @@ export default function HomeScreen() {
       <FlatList
         data={routines}
         keyExtractor={(item) => item._id}
-        style={{ padding: 20, marginBottom: 80 }}
+        style={{ padding: 8, marginBottom: 80 }}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item: routine }) => (
           <View style={styles.routine}>
-            <Text style={styles.routineTitle}>{routine.name}</Text>
+            <Text style={styles.routineTitle}>{capitalizeWords(routine.name)}
+              
+            </Text>
 
             {/* Exercises within routine */}
             <View style={styles.exerciseList}>
               <FlatList
                 data={routine.exercises}
-                keyExtractor={(exercise) => exercise._id["$oid"]}
+                keyExtractor={(exercise, index) => index.toString()}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                 renderItem={({ item: exercise }) => (
                   <View style={styles.exerciseItem}>
-                    {exercise.thumbnail_url && (
                       <Image
-                        source={{ uri: exercise.thumbnail_url }}
+                        source={{uri : exercise.thumbnail_url }}
                         style={styles.exerciseThumbnail}
                       />
-                    )}
                     <View style={styles.exerciseInfo}>
                       <Text style={styles.exerciseName}>{exercise.title}</Text>
                       <Text>
@@ -166,34 +167,42 @@ export default function HomeScreen() {
                 colors={[AppColors.Purple, AppColors.Blue]}
                 style={styles.button}
               >
+                <Link href={`/home/assignRoutine?routineId=${routine._id}&therapistId=${therapistId}`} asChild>
                 <TouchableOpacity
                   style={styles.buttonInner}
                 >
-                    <Link href={`/home/assignRoutine?routineId=${routine._id}&therapistId=${therapistId}`} asChild>
                   <ThemedText style={styles.buttonText}>
                     Assign
                   </ThemedText>
-                  </Link>
+                  
                 </TouchableOpacity>
+                </Link>
               </LinearGradient>
+
+              <Link href={`/home/editRoutine?routineId=${routine._id}`} asChild>
+              <TouchableOpacity onPress={() => {
+                console.log("Navigating to Edit Routine screen");}}>
                 <Image source={require(`@/assets/images/settings.png`)}
                 style={{height: 30, width: 30}}/>
-
+                </TouchableOpacity>
+              </Link>
               </View>
             </View>
           </View>
         )}
       />
-
+      <Link href={`/home/customRoutine`} asChild>
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => {
           console.log("Navigating to Custom Routine screen");
-          router.push(`./home/customRoutine`);
+          
         }}
       >
+        
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
+      </Link>
     </LinearGradient>
   );
 }
