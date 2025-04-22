@@ -123,6 +123,7 @@ export default function HomeScreen() {
       <View style={{ padding: 20 }}>
         <Text style={styles.errorText}>{error}</Text>
       </View>
+
     );
   }
   return (

@@ -24,6 +24,7 @@ export default function HomeLayout() {
                     backgroundColor: AppColors.OffWhite,
                 },
              }}/>
+
         </Stack>
     );
 }
