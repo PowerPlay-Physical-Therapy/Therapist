@@ -1,4 +1,4 @@
-import { StyleSheet, View, Image, TextInput, TouchableOpacity, Platform, Alert } from 'react-native';
+import { StyleSheet, View, Image, TextInput, TouchableOpacity, Platform, Alert,RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
@@ -10,6 +10,7 @@ import Modal from 'react-native-modal';
 import { useUser } from '@clerk/clerk-expo';
 import Constants from 'expo-constants';
 import { Stack } from 'expo-router';
+
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -27,8 +28,15 @@ export default function ManagePatients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalVisible, setModalVisible] = useState(false);
   const [email, setEmail] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const toggleModal = () => setModalVisible(!isModalVisible);
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchPatients(); // Fetch new data
+    setIsRefreshing(false); // Hide the refreshing indicator
+  };
 
   const fetchPatients = async () => {
     try {
@@ -165,7 +173,8 @@ export default function ManagePatients() {
           />
         </View>
 
-        <ScrollView style={{ flex: 1 }}>
+        <ScrollView style={{ flex: 1 }}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
           {filteredPatients.map((patient) => (
             <View key={patient.id} style={styles.patientItem}>
               <View style={styles.patientInfo}>

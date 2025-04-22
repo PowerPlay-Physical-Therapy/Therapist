@@ -5,6 +5,7 @@ import {
   Platform,
   TextInput,
   SafeAreaView,
+  ScrollView
 } from "react-native";
 import { useState } from "react";
 // import { HelloWave } from '@/components/HelloWave';
@@ -29,58 +30,59 @@ export default function HomeScreen() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const [therapistName, setTherapistName] = useState<string | null>(null);
-  const [routines, setRoutines] = useState<any[]>([]);
+  const [routines, setRoutines] = useState<any[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { user, isLoaded } = useUser();
   const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCustomRoutines = async () => {
-      if (!user || !isLoaded) {
-        return;
-      }
-      // Display user id
-      const therapistId = user?.id;
-      console.log("userid:", user?.id);
-      setTherapistId(therapistId);
-      setTherapistName(user?.firstName || "Therapist");
+  const fetchCustomRoutines = async () => {
+    if (!user || !isLoaded) {
+      return;
+    }
+    // Display user id
+    const therapistId = user?.id;
+    console.log("userid:", user?.id);
+    setTherapistId(therapistId);
+    setTherapistName(user?.firstName || "Therapist");
 
-      // Error message if no therapistID is available
-      if (!therapistId) {
-        setError("Therapist ID is not defined");
-        return;
-      }
+    // Error message if no therapistID is available
+    if (!therapistId) {
+      setError("Therapist ID is not defined");
+      return;
+    }
 
-      console.log("therapistid:", therapistId);
+    console.log("therapistid:", therapistId);
 
-      try {
-        // fetch custom routines
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/get_custom_routines/${therapistId}`,
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-
-        // Throw an error if the response is not successful
-        if (!response.ok) {
-          throw new Error("Failed to fetch custom routines");
+    try {
+      // fetch custom routines
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/get_custom_routines/${therapistId}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
         }
+      );
 
-        // Parse the response as JSON
-        const data = await response.json();
-        console.log("Fetched data:", data);
-        setRoutines(data);
-      } catch (err) {
-        console.error("Error fetching routines:", err);
-        setError("Failed to fetch routines");
+      // Throw an error if the response is not successful
+      if (!response.ok) {
+        throw new Error("Failed to fetch custom routines");
       }
-    };
+
+      // Parse the response as JSON
+      const data = await response.json();
+      console.log("Fetched data:", data);
+      setRoutines(data);
+    } catch (err) {
+      console.error("Error fetching routines:", err);
+      setError("Failed to fetch routines");
+    }
+  };
+
+  useEffect(() => {
     fetchCustomRoutines();
   }, [isLoaded, user]);
 
@@ -106,6 +108,12 @@ export default function HomeScreen() {
       }
       console.log('User updated successfully!');
     } */
+
+      const onRefresh = async () => {
+        setIsRefreshing(true);
+        await fetchCustomRoutines();
+        setIsRefreshing(false);
+    }
   
 
 
@@ -124,8 +132,22 @@ export default function HomeScreen() {
     >
       <ScreenHeader title="Home Library" logo={true} />
 
-      {/* Display each assigned routine */}
+      {!routines && (
+                <ScrollView style={{ flex: 1}}>  
+                    <ThemedText style={{ alignSelf: 'center', color : 'black', paddingTop: 80}}>Loading Routines...</ThemedText>
+                </ScrollView>
+            )}
+
+      {routines && routines.length === 0 && (
+                <ScrollView style={{ flex: 1}}>
+                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                    <ThemedText style={{ alignSelf: 'center', color : 'black', paddingTop: 80}}>No Routines Added</ThemedText>
+                </View>
+                </ScrollView>)}
+      {routines && routines.length > 0 && (
       <FlatList
+        refreshing={isRefreshing}
+        onRefresh={onRefresh}
         data={routines}
         keyExtractor={(item) => item._id}
         style={{ padding: 8, marginBottom: 80 }}
@@ -191,6 +213,7 @@ export default function HomeScreen() {
           </View>
         )}
       />
+      )}
       <Link href={`/home/customRoutine`} asChild>
       <TouchableOpacity
         style={styles.addButton}
@@ -198,7 +221,7 @@ export default function HomeScreen() {
           console.log("Navigating to Custom Routine screen");
           
         }}
-      >
+      > 
         
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>

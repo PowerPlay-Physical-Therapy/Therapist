@@ -68,14 +68,27 @@ export default function AssignRoutineScreen() {
                             <Image source={{uri: patient.imageUrl}} style={styles.patientImage} />
                             <ThemedText style={styles.patientName}>{patient.firstname} {patient.lastname}</ThemedText>
                           </View>
-                          
+                          {assigned[index] ? (
+                            <LinearGradient colors={["#4CAF50", "#81C784"]} style={styles.removeButtonGradient}>
+                            <TouchableOpacity style={styles.button} onPress={() => {Alert.alert('Routine already assigned');
+                            }}>
+                              
+                              <ThemedText style={styles.buttonText}>Assigned</ThemedText>
+                              
+                            </TouchableOpacity>
+                          </LinearGradient>
+                          ) :
                             <LinearGradient colors={[AppColors.Purple, AppColors.Blue]} style={styles.removeButtonGradient}>
-                            <TouchableOpacity style={styles.button} onPress={() => {assignRoutine(patient._id)}}>
+                            <TouchableOpacity style={styles.button} onPress={() => {assignRoutine(patient._id);
+                              const updatedAssigned = [...assigned];
+                              updatedAssigned[index] = true;
+                              setAssigned(updatedAssigned);
+                            }}>
                               
                               <ThemedText style={styles.buttonText}>Assign</ThemedText>
                               
                             </TouchableOpacity>
-                          </LinearGradient>
+                          </LinearGradient>}
                             
                         </View>
                       ))}

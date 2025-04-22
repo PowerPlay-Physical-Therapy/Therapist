@@ -11,7 +11,21 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { Alert } from 'react-native';
 import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import * as React from 'react';
+
+async function schedulePushNotification() {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "PowerPlay misses you!",
+        body: 'Log into the app to stay on track with your fitness goals!',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 2,
+      },
+    });
+  }
 
 
 export default function ProfileScreen() {
@@ -22,6 +36,18 @@ export default function ProfileScreen() {
     const [image, setImage] = useState(user?.imageUrl);
     const [username, setUsername] = useState("");
     const [notifications, setNotifications] = useState(false);
+
+    const toggleNotifications = () => {
+        
+        if (!notifications) {
+            schedulePushNotification();
+            setNotifications(!notifications);
+        } else {
+            Notifications.cancelAllScheduledNotificationsAsync();
+            setNotifications(!notifications);
+        }
+    }
+
     useEffect(() => {
         const fetchDebugInfo = async () => {
           try {
@@ -36,9 +62,6 @@ export default function ProfileScreen() {
         fetchDebugInfo();
       }, []);
     
-    const toggleNotifications = () => {
-        setNotifications(!notifications);
-    }
 
     const handleSignOut = async () => {
         try {
