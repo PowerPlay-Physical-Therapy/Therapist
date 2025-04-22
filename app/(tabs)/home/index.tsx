@@ -84,9 +84,10 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchCustomRoutines();
+    updateUser();
   }, [isLoaded, user]);
 
-  /*
+  
     const updateUser = async () => {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
         method: 'PUT',
@@ -107,7 +108,7 @@ export default function HomeScreen() {
         throw new Error('Failed to update user');
       }
       console.log('User updated successfully!');
-    } */
+    }
 
       const onRefresh = async () => {
         setIsRefreshing(true);
@@ -167,8 +168,9 @@ export default function HomeScreen() {
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                 renderItem={({ item: exercise }) => (
                   <View style={styles.exerciseItem}>
+                    
                       <Image
-                        source={{uri : exercise.thumbnail_url }}
+                        source={exercise.thumbnail_url? {uri : exercise.thumbnail_url} : require(`@/assets/images/default-thumbnail.png`)}
                         style={styles.exerciseThumbnail}
                       />
                     <View style={styles.exerciseInfo}>
@@ -316,7 +318,7 @@ const styles = StyleSheet.create({
   exerciseItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 5,
   },
 
   separator: {

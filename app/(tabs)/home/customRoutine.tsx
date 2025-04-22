@@ -322,7 +322,6 @@ export default function CustomRoutineScreen() {
 
             for (let i = 0; i < updatedExercises.length; i++) {
                 const exercise = updatedExercises[i];
-            
       
                 const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_exercise`, {
                 method: 'POST',

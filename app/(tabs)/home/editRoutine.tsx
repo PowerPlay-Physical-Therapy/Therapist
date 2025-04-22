@@ -13,10 +13,8 @@ import { Collapsible } from '@/components/Collapsible';
 import { useEffect } from 'react';
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import * as React from 'react';
-import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView } from 'react-native';
+import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView, Alert, Dimensions} from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol.ios';
-
-
 import { useSignIn } from "@clerk/clerk-expo";
 import { Image, Platform, SafeAreaView, StyleSheet } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
@@ -44,6 +42,7 @@ interface Exercise {
     subcategory: string;
 }
 
+const screenWidth = Dimensions.get('window').width;
 
 // aws s3 credentials
 const AWS_ACCESS_KEY = process.env.EXPO_PUBLIC_AWS_ACCESS_KEY_ID
@@ -92,7 +91,7 @@ export default function EditRoutineScreen() {
 
     const [therapistName, setTherapistName] = useState<string | null>(null);
     const [routines, setRoutines] = useState<any[]>([]);
-    const [therapistId, setTherapistId] = useState<string | null>(null);
+    const [therapistId, setTherapistId] = useState<string>("");
 
     useEffect(() => {
         const fetchRoutineDetails = async () => {
@@ -368,7 +367,24 @@ export default function EditRoutineScreen() {
 
     // deletes an exercise by id
     const removeExercise = (id: string) => {
-        setExercises((prevExercises) => prevExercises.filter(ex => ex._id !== id));
+
+        Alert.alert(
+        "Confirm Deletion",
+        "Are you sure you want to delete this exercise?",
+        [
+            {
+                text: "Cancel",
+                style: "cancel",
+            },
+            {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => {
+                    setExercises((prevExercises) => prevExercises.filter(ex => ex._id !== id));
+                },
+            },
+        ]
+    );
     };
 
     console.log("routineId:", routineId)
@@ -454,8 +470,46 @@ export default function EditRoutineScreen() {
         }
     };
 
+    const deleteRoutine = async (therapistId: string, routineId: string) => {
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/delete_custom_routine/${therapistId}/${routineId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to delete routine');
+            }
+    
+            console.log('Routine deleted successfully!');
+            router.push('/');
+        } catch (error) {
+            console.error('Error deleting routine:', error);
+            setError('Failed to delete routine. Please try again.');
+        }
+    }
+    
+    // delete routine
+    const removeRoutine = async (therapistId: string, routineId: string) => {
+        Alert.alert(
+            "Confirm Deletion",
+            "Are you sure you want to delete this routine?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => deleteRoutine(therapistId, routineId),
+                },
+            ]
+        )
+    }
+
     return (
-        <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
+        <LinearGradient style={{ flex: 1}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <View style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 250 }]} showsVerticalScrollIndicator={false}>
                     <TextInput style={styles.input} value={name} onChangeText={setName} />
@@ -466,13 +520,18 @@ export default function EditRoutineScreen() {
                         <View key={exercise._id} style={styles.exerciseBlock}>
                             <View style={styles.exerciseContainer}>
 
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                     <Text style={styles.label}>Exercise Name:</Text>
                                     <TextInput
                                         style={styles.input}
                                         value={exercise.title}
                                         onChangeText={(text) => updateExercise(index, "title", text)}
                                     />
+                                    </View>
+                                    <TouchableOpacity onPress={() => removeExercise(exercise._id)}>
+                                        <IconSymbol name="trash" size={24} color="black" style={{ marginLeft: 10 }} />
+                                    </TouchableOpacity>
                                 </View>
 
                                 {/* Display video preview */}
@@ -565,8 +624,8 @@ export default function EditRoutineScreen() {
 
                 </ScrollView>
                 
-                <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
-
+                <View style={{ position: 'absolute', bottom: 100, left: 0, right: 0, alignItems: 'center', width: screenWidth }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
                     <LinearGradient
                         colors={[AppColors.Purple, AppColors.Blue]}
                         style={styles.createButton}
@@ -575,10 +634,15 @@ export default function EditRoutineScreen() {
                             style={styles.buttonInner}
                             onPress={() => updateRoutine()} 
                         >
-                        <ThemedText style={styles.buttonText}>Update Routine</ThemedText>
+                        <ThemedText style={styles.buttonText}>Save</ThemedText>
                         </TouchableOpacity>
                     </LinearGradient>
-
+                    <LinearGradient colors={["#E91313", "#EB9BD0"]} style={styles.removeButtonGradient}>
+                                      <TouchableOpacity style={styles.removeButton} onPress={() => removeRoutine(therapistId, routineId)}>
+                                        <ThemedText style={styles.removeButtonText}>Delete?</ThemedText>
+                                      </TouchableOpacity>
+                    </LinearGradient>
+                    </View>
                     {error && <Text style={styles.errorText}>{error}</Text>}
                 </View>
             </View>
@@ -588,8 +652,28 @@ export default function EditRoutineScreen() {
 
 
 const styles = StyleSheet.create({
+    removeButtonGradient: {
+        borderRadius: 25,
+        paddingHorizontal: 1,
+        paddingVertical: 1,
+        marginLeft: 12,
+        width: '30%',
+      },
+      removeButton: {
+        borderRadius: 25,
+        backgroundColor: 'transparent',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      removeButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+      },
     buttonInner: {
         padding: 12,
+        paddingHorizontal: 20,
         alignItems: 'center',
         borderRadius: 20,
     },
@@ -614,12 +698,6 @@ const styles = StyleSheet.create({
     },
 
     createButton: {
-        position: 'absolute',  // Fixed at the bottom of the page
-        bottom: 20,
-        left: '50%',
-        transform: [{ translateX: '-50%' }],
-        marginBottom: 20,
-        width: '50%',
         borderRadius: 25,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -628,6 +706,8 @@ const styles = StyleSheet.create({
         elevation: 5,
         alignItems: 'center',
         alignSelf: 'center',
+        marginRight: 12,
+        width: '30%',
     },
 
     container: { 
@@ -636,8 +716,6 @@ const styles = StyleSheet.create({
     },
 
     form: {
-        marginTop: 20,
-        flex: 1,
         paddingBottom: 150,
     },
 
@@ -763,6 +841,8 @@ const styles = StyleSheet.create({
     videoPreview: {
         width: 300,
         height: 200,
+        marginTop: 12,
+        marginBottom: 12
     },
 
     separator: {
