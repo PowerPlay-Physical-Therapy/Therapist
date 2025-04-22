@@ -26,7 +26,7 @@ import * as FileSystem from 'expo-file-system';
 import { Video, ResizeMode } from 'expo-av';
 import * as mime from 'mime';
 import { Buffer } from 'buffer';
-import aws from 'aws-sdk'
+import aws from 'aws-sdk';
 
 
 // define exercise structure
