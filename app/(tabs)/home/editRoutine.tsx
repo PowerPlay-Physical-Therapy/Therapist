@@ -228,12 +228,6 @@ export default function EditRoutineScreen() {
             });
             const binaryData = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
             uploadBody = binaryData;
-            // const fileUri = selected.uri;
-            // const fileBuffer = await FileSystem.readAsStringAsync(fileUri, {
-            //   encoding: FileSystem.EncodingType.Base64,
-            // });
-            
-            // uploadBody = Buffer.from(fileBuffer, 'base64');
             
         }
         
@@ -379,7 +373,7 @@ export default function EditRoutineScreen() {
 
     console.log("routineId:", routineId)
 
-    // create new routine
+    // update routine
     const updateRoutine = async () => {
         try {
             if (!name || !category) {
@@ -389,13 +383,14 @@ export default function EditRoutineScreen() {
 
             console.log('Backend URL:', process.env.EXPO_PUBLIC_BACKEND_URL);
 
-            // create all exercises
+            // create/modify exercises
             const updatedExercises = [...exercises];
 
             for (let i = 0; i < updatedExercises.length; i++) {
                 const exercise = updatedExercises[i];
                 const isNew = !exercise._id
             
+                // will refer to the necessary request
                 const method = isNew ? 'POST' : 'PUT';
                 const url = isNew
                     ? `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_exercise`
@@ -418,21 +413,7 @@ export default function EditRoutineScreen() {
 
                     }),
                 });
-
-                console.log("Updating Exercise:", JSON.stringify({
-                    reps: exercise.reps,
-                    hold: exercise.hold,
-                    sets: exercise.sets,
-                    frequency: exercise.frequency,
-                    description: exercise.description,
-                    thumbnail_url: exercise.thumbnail_url,
-                    video_url: exercise.video_url,
-                    title: exercise.title,
-                    category: category,
-                    subcategory: exercise.subcategory,
-                }, null, 2));
-                
-        
+             
                 const data = await response.json();
                 if (!response.ok) {
                 throw new Error(data.detail || 'Failed to update/create exercise');
@@ -464,20 +445,6 @@ export default function EditRoutineScreen() {
             }
         
             console.log('Routine updated successfully:', routineData);
-
-            if (user?.id && routineData.routine_id) {
-                const updateResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/add_custom_routines/${user.id}/${routineData.routine_id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-
-                const updateData = await updateResponse.json();
-                if (!updateResponse.ok) {
-                    console.error('Failed to update therapist with routine:', updateData);
-                } else {
-                    console.log('Routine linked to therapist successfully:', updateData);
-                }
-            }
 
             router.push('/');
         
