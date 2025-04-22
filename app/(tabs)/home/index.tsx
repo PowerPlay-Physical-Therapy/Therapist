@@ -1,4 +1,4 @@
-import { Image, StyleSheet, TouchableOpacity, Platform, TextInput, SafeAreaView } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, Platform, TextInput, SafeAreaView, ScrollView } from 'react-native';
 import { useState } from 'react';
 // import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -103,7 +103,8 @@ export default function HomeScreen() {
                 renderItem={({ item: routine }) => (            
                     <View style={styles.routine}>
                         <Text style={styles.routineTitle}>{routine.name}</Text>
-                    
+                        <Image source={require('@/assets/images/chevron-right.png')} style={{width: 20, height: 20}} />
+
                         {/* Exercises within routine */}
                         <View style={styles.exerciseList}>
                             <FlatList
@@ -125,7 +126,6 @@ export default function HomeScreen() {
                                             </Text>
                                         </View>
 
-                                        <Image source={require('@/assets/images/chevron-right.png')} style={{width: 20, height: 20}} />
                                     </View>
                                 )}
                             />
