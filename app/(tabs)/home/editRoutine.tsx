@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 // import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
@@ -13,7 +13,7 @@ import { Collapsible } from '@/components/Collapsible';
 import { useEffect } from 'react';
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import * as React from 'react';
-import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { Text, View, FlatList, TextInput, Button, TouchableOpacity, ScrollView, Alert, Dimensions} from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol.ios';
 import { useSignIn } from "@clerk/clerk-expo";
 import { Image, Platform, SafeAreaView, StyleSheet } from "react-native";
@@ -24,7 +24,7 @@ import * as FileSystem from 'expo-file-system';
 import { Video, ResizeMode } from 'expo-av';
 import * as mime from 'mime';
 import { Buffer } from 'buffer';
-import aws from 'aws-sdk'
+import aws from 'aws-sdk';
 
 
 // define exercise structure
@@ -42,6 +42,7 @@ interface Exercise {
     subcategory: string;
 }
 
+const screenWidth = Dimensions.get('window').width;
 
 // aws s3 credentials
 const AWS_ACCESS_KEY = process.env.EXPO_PUBLIC_AWS_ACCESS_KEY_ID
@@ -60,17 +61,15 @@ const s3 = new aws.S3({
 
 global.Buffer = global.Buffer || Buffer;
 
-const {width: ScreenWidth} = Dimensions.get('window');
-const {height: ScreenHeight} = Dimensions.get('window');
 
-
-export default function CustomRoutineScreen() {
-    
+export default function EditRoutineScreen() {
     const { isSignedIn } = useAuth();
     const { user, isLoaded } = useUser();
     const router = useRouter();
+   
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
+    const [uploadedVideos, setUploadedVideos] = useState<Set<string>>(new Set());
     const [video, setVideo] = useState<{ uri: string; name: string; type: string } | null>(null);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
@@ -82,14 +81,83 @@ export default function CustomRoutineScreen() {
         thumbnailUrl: string;
       }>>({});
       
-      
+
     const local = useLocalSearchParams();
+    const routineId = local.routineId?.toString(); 
     const uri = local.videoUri?.toString();
     const localThumbnail = local.thumbnailUri?.toString();
     const userId = String(user?.id);
     const [text, onChangeText] = useState("");
+
+    const [therapistName, setTherapistName] = useState<string | null>(null);
+    const [routines, setRoutines] = useState<any[]>([]);
+    const [therapistId, setTherapistId] = useState<string>("");
+
+    useEffect(() => {
+        const fetchRoutineDetails = async () => {
+            if (!user || !isLoaded) {
+                return;
+            }
     
-      
+            // Display user id
+            const therapistId = user?.id;
+            console.log("userid:", user?.id);
+            setTherapistId(therapistId);
+            setTherapistName(user?.firstName || "Therapist");
+
+            // Error message if no therapistID is available
+            if (!therapistId) {
+                setError('Therapist ID is not defined');
+                return;
+            }
+
+            try {
+                // fetch custom routine
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_routine/${routineId}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+
+                // Throw an error if the response is not successful                
+                if (!response.ok) {
+                    throw new Error("Failed to fetch custom routine");
+                }
+
+                // Parse the response as JSON
+                const routineData = await response.json();
+                console.log("Fetched data:", routineData);
+                setName(routineData.name);
+                setExercises(routineData.exercises || []);
+
+                // fetch exercise to get category
+                const fullExercises: Exercise[] = await Promise.all(
+                    (routineData.exercises || []).map(async (exerciseObj: { _id: string }) => {
+                        const exerciseId = exerciseObj._id;
+                        const exerciseres = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_exercise/${exerciseId}`, {
+                            method: 'GET',
+                            headers: { 'Content-Type': 'application/json' },
+                        });
+                        // Throw an error if the response is not successful                
+                        if (!exerciseres.ok) {
+                            throw new Error("Failed to fetch custom exercise");
+                        }
+                                
+                        // Parse the response as JSON
+                        const exerciseData = await exerciseres.json();
+                        console.log("Fetched data:", exerciseData);
+                        setCategory(exerciseData.category);
+                    })
+                );
+
+            } catch (err) {
+                console.error("Error fetching routine:", err);
+                setError("Failed to fetch routine");
+            }
+        };
+        fetchRoutineDetails();
+
+    }, [isLoaded, user]);
+
     // pick a video from device
     const uploadVideo = async (): Promise<{
     uri: string;
@@ -119,20 +187,18 @@ export default function CustomRoutineScreen() {
         }
     };
 
-   
+    
     // generate s3 pre-signed upload url
     async function generateUploadURL() {
         const imageName = `${Date.now()}.mov`; // Ensure that you're passing a valid file name
-   
+    
         const params = {
             Bucket: S3_BUCKET,
             Key: imageName,
             Expires: 60, // expires in 60 secs
         };
-   
-        console.log("hello")
+    
         try {
-            console.log("bye")
             const uploadURL = await s3.getSignedUrlPromise('putObject', params);
             console.log('Generated upload URL:', uploadURL); 
             return { uploadURL, imageName }; // key to upload final url
@@ -141,7 +207,7 @@ export default function CustomRoutineScreen() {
             throw error;
         }
     }
-   
+    
 
     // upload, generate thumbnail, and update state
     const handleUpload = async (
@@ -161,13 +227,7 @@ export default function CustomRoutineScreen() {
             });
             const binaryData = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
             uploadBody = binaryData;
-            // const fileUri = selected.uri;
-            // const fileBuffer = await FileSystem.readAsStringAsync(fileUri, {
-            //   encoding: FileSystem.EncodingType.Base64,
-            // });
-          
-            // uploadBody = Buffer.from(fileBuffer, 'base64');
-          
+            
         }
         
         const { uploadURL, imageName } = await generateUploadURL();
@@ -224,6 +284,9 @@ export default function CustomRoutineScreen() {
             return updated;
         });
     
+        // mark video as uploaded
+        setUploadedVideos((prev) => new Set(prev).add(selected.uri));
+
         } catch (err) {
         console.error('Upload error:', err);
         setError('Upload failed');
@@ -234,49 +297,52 @@ export default function CustomRoutineScreen() {
     const onUploadPress = async (exerciseId: string, index: number) => {
         const selected = await uploadVideo();
         if (selected) {
-          await handleUpload(exerciseId, index, selected);
+            if (uploadedVideos.has(selected.uri)) {
+                console.log("Video already uploaded. Skipping duplicate upload");
+                return;
+            }
+            await handleUpload(exerciseId, index, selected);
         }
     };      
-  
+    
     // generate thumbnail for web platform
     const generateWebThumbnail = async (videoUrl: string): Promise<string> => {
         return new Promise((resolve, reject) => {
-          const video = document.createElement('video');
-          video.crossOrigin = 'anonymous';
-          video.src = videoUrl;
-          video.muted = true;
-          video.currentTime = 1;
-      
-          video.onloadeddata = () => {
+            const video = document.createElement('video');
+            video.crossOrigin = 'anonymous';
+            video.src = videoUrl;
+            video.muted = true;
+            video.currentTime = 1;
+        
+            video.onloadeddata = () => {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-      
+        
             const ctx = canvas.getContext('2d');
             if (!ctx) {
-              reject('Could not get canvas context');
-              return;
+                reject('Could not get canvas context');
+                return;
             }
-      
+        
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const thumbnailDataUrl = canvas.toDataURL('image/jpeg');
             resolve(thumbnailDataUrl);
-          };
-      
-          video.onerror = (e) => {
+            };
+        
+            video.onerror = (e) => {
             reject('Error loading video for thumbnail generation');
-          };
+            };
         });
     };
     
 
     // appends new blank exercise
     const addExercise = () => {
-        setExercises((prevExercises) => 
-            [
+        setExercises((prevExercises) => [
             ...prevExercises,
             {
-                _id: `${Date.now()}`,
+                _id: "",
                 title: "",
                 category: "",
                 description: "",
@@ -289,9 +355,7 @@ export default function CustomRoutineScreen() {
                 video_url: ""
             }
         ]);
-
     };
-
 
     // updates exercise fields
     const updateExercise = (index: number, key: string, value: string | number) => {
@@ -299,16 +363,34 @@ export default function CustomRoutineScreen() {
         updatedExercises[index] = { ...updatedExercises[index], [key]: value };
         setExercises(updatedExercises);
     };
-   
+    
 
     // deletes an exercise by id
     const removeExercise = (id: string) => {
-        setExercises((prevExercises) => prevExercises.filter(ex => ex._id !== id));
+
+        Alert.alert(
+        "Confirm Deletion",
+        "Are you sure you want to delete this exercise?",
+        [
+            {
+                text: "Cancel",
+                style: "cancel",
+            },
+            {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => {
+                    setExercises((prevExercises) => prevExercises.filter(ex => ex._id !== id));
+                },
+            },
+        ]
+    );
     };
 
+    console.log("routineId:", routineId)
 
-    // create new routine
-    const createRoutine = async () => {
+    // update routine
+    const updateRoutine = async () => {
         try {
             if (!name || !category) {
                 setError('Please enter a routine name and select a category.');
@@ -316,15 +398,22 @@ export default function CustomRoutineScreen() {
             }
 
             console.log('Backend URL:', process.env.EXPO_PUBLIC_BACKEND_URL);
-        
-            // create all exercises
+
+            // create/modify exercises
             const updatedExercises = [...exercises];
 
             for (let i = 0; i < updatedExercises.length; i++) {
                 const exercise = updatedExercises[i];
-      
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_exercise`, {
-                method: 'POST',
+                const isNew = !exercise._id
+            
+                // will refer to the necessary request
+                const method = isNew ? 'POST' : 'PUT';
+                const url = isNew
+                    ? `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/create_exercise`
+                    : `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_exercise/${exercise._id}`;
+        
+                const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     reps: exercise.reps,
@@ -340,106 +429,115 @@ export default function CustomRoutineScreen() {
 
                     }),
                 });
-
-                console.log("Uploading Exercise:", JSON.stringify({
-                    reps: exercise.reps,
-                    hold: exercise.hold,
-                    sets: exercise.sets,
-                    frequency: exercise.frequency,
-                    description: exercise.description,
-                    thumbnail_url: exercise.thumbnail_url,
-                    video_url: exercise.video_url,
-                    title: exercise.title,
-                    category: category,
-                    subcategory: exercise.subcategory,
-                }, null, 2));
-                
-        
+             
                 const data = await response.json();
                 if (!response.ok) {
-                throw new Error(data.detail || 'Failed to create exercise');
+                throw new Error(data.detail || 'Failed to update/create exercise');
                 }
         
-                console.log("Created exercise with ID:", data._id);
-                updatedExercises[i]._id = data._id;
+                console.log("Updating exercises with ID:", data._id);
+                updatedExercises[i]._id = data._id || exercise._id;
             };
             setExercises(updatedExercises);
-      
+        
         
             console.log("Created exercise IDs before creating routine:", updatedExercises.map(ex => ({ _id: ex._id })));
-            console.log('Routine API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`);
+            console.log('Routine API URL:', `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_routine`);
 
-            // Step 2: Create routine with exercise IDs
-            const routineResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`, {
-                method: 'POST',
+            // Update routine with exercise IDs
+            const routineResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_routine/${routineId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name,
-                    // exercises: createdExerciseIds,
                     exercises: updatedExercises.map(ex => ({ _id: ex._id })),
                 }),
             });
-      
+        
             const routineData = await routineResponse.json();
-      
+        
             if (!routineResponse.ok) {
-                throw new Error(routineData.detail || 'Failed to create routine');
+                throw new Error(routineData.detail || 'Failed to update routine');
             }
-      
-            console.log('Routine created successfully:', routineData);
-
-            if (user?.id && routineData.routine_id) {
-                const updateResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/add_custom_routines/${user.id}/${routineData.routine_id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-
-                const updateData = await updateResponse.json();
-                if (!updateResponse.ok) {
-                    console.error('Failed to update therapist with routine:', updateData);
-                } else {
-                    console.log('Routine linked to therapist successfully:', updateData);
-                }
-            }
+        
+            console.log('Routine updated successfully:', routineData);
 
             router.push('/');
-      
+        
         } catch (err) {
-            console.error('Routine creation error:', err);
-            setError('Failed to create routine. Please try again.');
+            console.error('Routine update error:', err);
+            setError('Failed to update routine. Please try again.');
         }
     };
+
+    const deleteRoutine = async (therapistId: string, routineId: string) => {
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/delete_custom_routine/${therapistId}/${routineId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+            });
     
+            if (!response.ok) {
+                throw new Error('Failed to delete routine');
+            }
+    
+            console.log('Routine deleted successfully!');
+            router.push('/');
+        } catch (error) {
+            console.error('Error deleting routine:', error);
+            setError('Failed to delete routine. Please try again.');
+        }
+    }
+    
+    // delete routine
+    const removeRoutine = async (therapistId: string, routineId: string) => {
+        Alert.alert(
+            "Confirm Deletion",
+            "Are you sure you want to delete this routine?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => deleteRoutine(therapistId, routineId),
+                },
+            ]
+        )
+    }
 
     return (
         <LinearGradient style={{ flex: 1}} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <View style={{ flex: 1 }}>
-                <ScrollView
-                onContentSizeChange={(contentWidth, contentHeight) => console.log(contentWidth, contentHeight)}
-                contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
-                    
-                    <TextInput style={styles.input} placeholder="Custom Routine Name" value={name} onChangeText={setName} />
-                    <TextInput style={styles.input} placeholder="Category" value={category} onChangeText={setCategory} /> 
+                <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 250 }]} showsVerticalScrollIndicator={false}>
+                    <TextInput style={styles.input} value={name} onChangeText={setName} />
+                    <TextInput style={styles.input} value={category} onChangeText={setCategory} /> 
                     
                     {exercises.map((exercise, index) => (
-
+                        
                         <View key={exercise._id} style={styles.exerciseBlock}>
                             <View style={styles.exerciseContainer}>
 
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                     <Text style={styles.label}>Exercise Name:</Text>
                                     <TextInput
                                         style={styles.input}
                                         value={exercise.title}
                                         onChangeText={(text) => updateExercise(index, "title", text)}
                                     />
+                                    </View>
+                                    <TouchableOpacity onPress={() => removeExercise(exercise._id)}>
+                                        <IconSymbol name="trash" size={24} color="black" style={{ marginLeft: 10 }} />
+                                    </TouchableOpacity>
                                 </View>
 
-                                {/* Display video preview only if a video is selected */}
+                                {/* Display video preview */}
                                 {exercise.video_url && (
                                     <View style={styles.previewContainer}>
                                         <Text>Video Selected:</Text>
-                                        {video && <Text style={styles.fileName}>Selected: {video.name}</Text>}
                                         <Video
                                             source={{ uri: exercise.video_url }}
                                             useNativeControls
@@ -513,6 +611,8 @@ export default function CustomRoutineScreen() {
                                         
                                 </LinearGradient>
                             </View>
+
+
                         </View>
 
                         
@@ -521,23 +621,28 @@ export default function CustomRoutineScreen() {
                     <TouchableOpacity style={styles.addButton} onPress={addExercise}>
                             <Text style={styles.addButtonText}>+</Text>
                     </TouchableOpacity>
-                    
+
                 </ScrollView>
                 
-                <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
-
+                <View style={{ position: 'absolute', bottom: 100, left: 0, right: 0, alignItems: 'center', width: screenWidth }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
                     <LinearGradient
                         colors={[AppColors.Purple, AppColors.Blue]}
                         style={styles.createButton}
                     >
                         <TouchableOpacity
                             style={styles.buttonInner}
-                            onPress={() => createRoutine()} 
+                            onPress={() => updateRoutine()} 
                         >
-                        <ThemedText style={styles.buttonText}>Create Routine</ThemedText>
+                        <ThemedText style={styles.buttonText}>Save</ThemedText>
                         </TouchableOpacity>
                     </LinearGradient>
-
+                    <LinearGradient colors={["#E91313", "#EB9BD0"]} style={styles.removeButtonGradient}>
+                                      <TouchableOpacity style={styles.removeButton} onPress={() => removeRoutine(therapistId, routineId)}>
+                                        <ThemedText style={styles.removeButtonText}>Delete?</ThemedText>
+                                      </TouchableOpacity>
+                    </LinearGradient>
+                    </View>
                     {error && <Text style={styles.errorText}>{error}</Text>}
                 </View>
             </View>
@@ -547,8 +652,28 @@ export default function CustomRoutineScreen() {
 
 
 const styles = StyleSheet.create({
+    removeButtonGradient: {
+        borderRadius: 25,
+        paddingHorizontal: 1,
+        paddingVertical: 1,
+        marginLeft: 12,
+        width: '30%',
+      },
+      removeButton: {
+        borderRadius: 25,
+        backgroundColor: 'transparent',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      removeButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+      },
     buttonInner: {
         padding: 12,
+        paddingHorizontal: 20,
         alignItems: 'center',
         borderRadius: 20,
     },
@@ -573,12 +698,6 @@ const styles = StyleSheet.create({
     },
 
     createButton: {
-        position: 'absolute',  // Fixed at the bottom of the page
-        bottom: 20,
-        left: '50%',
-        transform: [{ translateX: '-50%' }],
-        marginBottom: 20,
-        width: '50%',
         borderRadius: 25,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -587,6 +706,8 @@ const styles = StyleSheet.create({
         elevation: 5,
         alignItems: 'center',
         alignSelf: 'center',
+        marginRight: 12,
+        width: '30%',
     },
 
     container: { 
@@ -595,7 +716,6 @@ const styles = StyleSheet.create({
     },
 
     form: {
-        marginTop: 20,
         paddingBottom: 150,
     },
 
@@ -646,14 +766,12 @@ const styles = StyleSheet.create({
     exerciseInfo: {
         flex: 1,
     },
+
     exerciseBlock: {
-        
         marginBottom: 30,
-        
     },
 
     exerciseContainer: {
-        
         backgroundColor: AppColors.OffWhite,
         padding: 15,
         borderRadius: 10,
@@ -723,6 +841,8 @@ const styles = StyleSheet.create({
     videoPreview: {
         width: 300,
         height: 200,
+        marginTop: 12,
+        marginBottom: 12
     },
 
     separator: {

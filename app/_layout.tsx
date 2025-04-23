@@ -11,9 +11,20 @@ import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Notifications from 'expo-notifications';
+import {NotificationProvider} from '@/context/NotificationContext';
+
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }), 
+})
 
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!
@@ -37,6 +48,7 @@ export default function RootLayout() {
   }
 
   return (
+    <NotificationProvider>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <ClerkProvider publishableKey={publishableKey}>
         <ClerkLoaded>
@@ -58,6 +70,7 @@ export default function RootLayout() {
       </ClerkProvider>
 
     </ThemeProvider>
+    </NotificationProvider>
   );
 }
 
