@@ -1,3 +1,4 @@
+
 import {
   Image,
   StyleSheet,
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewFavorites, setViewFavorites] = useState(false);
 
   const fetchCustomRoutines = async () => {
     if (!user || !isLoaded) {
@@ -59,13 +61,10 @@ export default function HomeScreen() {
 
     try {
       // fetch custom routines
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/get_custom_routines/${therapistId}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const route = viewFavorites
+                    ? `/therapist/get_favorite_routines/${id}`
+                    : `/therapist/get_custom_routines/${id}`;
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}${route}`);
 
       // Throw an error if the response is not successful
       if (!response.ok) {
@@ -85,7 +84,7 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchCustomRoutines();
     updateUser();
-  }, [isLoaded, user]);
+  }, [isLoaded, user, viewFavorites]);
 
   
     const updateUser = async () => {
@@ -117,7 +116,6 @@ export default function HomeScreen() {
     }
   
 
-
   // Display the error message
   if (error) {
     return (
@@ -132,7 +130,24 @@ export default function HomeScreen() {
       style={{ flex: 1, paddingTop: Platform.OS == "ios" ? 50 : 0 }}
       colors={[AppColors.OffWhite, AppColors.LightBlue]}
     >
-      <ScreenHeader title="Home Library" logo={true} />
+      <ScreenHeader
+                title={viewFavorites ? "Favorites" : "Home Library"}
+                leftButton={null}
+                rightButton={
+                    <TouchableOpacity onPress={() => setViewFavorites(prev => !prev)}>
+                      <Image
+                        source={
+                          viewFavorites
+                            ? require('@/assets/images/heart-icon.png') // Filled heart image
+                            : require('@/assets/images/heart-outline.png') // Outline heart image
+                        }
+                        style={{ width: 24, height: 24 }}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  }
+                  
+            />
 
       {!routines && (
                 <ScrollView style={{ flex: 1}}>  
@@ -184,6 +199,9 @@ export default function HomeScreen() {
                         {exercise.sets}
                       </Text>
                     </View>
+                    <TouchableOpacity onPress={() => console.log("Heart toggle placeholder")}> 
+                                            <Image source={require('@/assets/images/heart-outline.png')} style={{ width: 24, height: 24 }} />
+                     </TouchableOpacity>
                   </View>
                 )}
               />
