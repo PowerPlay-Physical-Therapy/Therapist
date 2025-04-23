@@ -80,55 +80,22 @@ export default function PatientInfo() {
             return;
         }
 
-        // Show confirmation alert
-        Alert.alert(
-            "Delete Chat History",
-            "Are you sure you want to delete the chat history? This action cannot be undone.",
-            [
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/delete_chat/${user.id}/${patientId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-
-                            const data = await response.json();
-
-                            if (!response.ok) {
-                                if (response.status === 404) {
-                                    Alert.alert("Error", "No chat history found");
-                                    return;
-                                }
-                                throw new Error(data.detail || 'Failed to delete chat history');
-                            }
-
-                            Alert.alert(
-                                "Success",
-                                "Chat history deleted successfully",
-                                [
-                                    {
-                                        text: "OK",
-                                        onPress: () => router.back()
-                                    }
-                                ]
-                            );
-                        } catch (error) {
-                            console.error('Error deleting chat:', error);
-                            Alert.alert("Error", "Failed to delete chat history");
-                        }
-                    }
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/delete_chat/${user.id}/${patientId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            ]
-        );
+            });
+
+            if (response.ok) {
+                router.push('/message');
+            } else {
+                console.error('Failed to delete chat history');
+            }
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+        }
     };
 
     return (

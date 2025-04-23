@@ -156,6 +156,7 @@ export default function RoutineDetails() {
     const handleAssignPress = () => {
         // TODO: Implement assign functionality
         console.log("Assign button pressed");
+        router.push(`/home/assignRoutine?routineId=${routineId}&therapistId=${user?.id}`);
     };
 
     return (
