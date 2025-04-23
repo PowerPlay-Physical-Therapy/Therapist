@@ -4,24 +4,32 @@ import { AppColors } from "@/constants/Colors";
 import { useUser } from "@clerk/clerk-expo";
 import { Card } from "@rneui/base";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, Stack, useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
+import { router, Stack, useGlobalSearchParams, useLocalSearchParams, useRouter, Link } from "expo-router";
 import React, { useEffect, useState } from "react"
 import { ScrollView, View, Text, Platform, Dimensions, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Notification from "@/components/Notification";
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 // import Toast from "react-native-toast-message";
 
 const { height, width } = Dimensions.get("window")
 
 export default function RoutineDetails() {
 
-    const { user } = useUser();
+    const { user, isLoaded } = useUser();
+    const router = useRouter();
 
     const local = useLocalSearchParams();
+    console.log("local params:", local); 
     const parsedId = JSON.parse(local.exerciseId);
+    const routineId = local.routineId?.toString(); 
     const exercise_id = parsedId.$oid;
-
-    const [routine, setRoutine] = useState([]);
+    
+    const [error, setError] = useState<string | null>(null);
+    const [routine, setRoutine] = useState<any[]>([]);
+    const [therapistName, setTherapistName] = useState<string | null>(null);
+    const [therapistId, setTherapistId] = useState<string | null>(null);
 
     const [notification, setNotification] = useState(null);
 
@@ -36,47 +44,89 @@ export default function RoutineDetails() {
     // const routine = require('@/assets/Exercises.json');
 
     //TODO:Only for single exercise routine, need to change for multiple exercises
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_exercise/${exercise_id}`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                setRoutine([data]);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        };
-        fetchData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            const fetchData = async () => {
+                if (!isLoaded) {
+                    return;
+                }
 
-    const handleAddRoutine = () => {
+                try {
+                    const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_exercise/${exercise_id}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    const data = await response.json();
+                    setRoutine([data]);
+                } catch (error) {
+                    console.error("Error fetching data:", error);
+                }
+            };
+            fetchData();
+        }, [isLoaded])
+    );
+
+    const handleAddRoutine = async () => {
         showNotification();
         // Toast.show({ text1: "Hello", type: "success" })
-        console.log(1)
-        const writeData = async () => {
-            try {
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/patient/add_explore_routine/${user?.id}`, {
+        if (!user || !isLoaded) {
+            return;
+        }
+
+        // Display user id
+        const therapistId = user?.id;
+        console.log("userid:", user?.id);
+        setTherapistId(therapistId);
+        setTherapistName(user?.firstName || "Therapist");
+
+        // Error message if no therapistID is available
+        if (!therapistId) {
+            setError('Therapist ID is not defined');
+            return;
+        }
+
+        try {
+            let newRoutineId = routineId;
+
+            // If no routineId was passed, create one
+            if (!routineId) {
+                const newRoutine = {
+                    title: routine[0]?.title || "Untitled Routine",
+                    exercises: [{ _id: exercise_id }]
+                };
+
+                const createRoutineResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create_routine`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: routine[0].title,
-                        exercises: routine.map(exercise => ({ _id: exercise._id }))
-                    })
+                    body: JSON.stringify(newRoutine)
                 });
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                console.log("Fetched data:", data);
 
-                router.back();
-            } catch (error) {
-                console.error("Error fetching data:", error);
+                if (!createRoutineResponse.ok) throw new Error("Failed to create routine");
+
+                const routineData = await createRoutineResponse.json();
+                newRoutineId = routineData.routine_id;
             }
+
+            const updateResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/add_custom_routines/${therapistId}/${newRoutineId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            const updateData = await updateResponse.json();
+            
+            if (!updateResponse.ok) {
+                console.error('Failed to update therapist with routine:', updateData);
+            } else {
+                console.log('Routine linked to therapist successfully:', updateData);
+            }
+            
+            router.push('/');
+
+        } catch (err) {
+            console.error("Error adding routines:", err);
+            setError("Failed to adding routines");
         }
-        writeData();
     }
 
     return (
@@ -125,6 +175,19 @@ export default function RoutineDetails() {
                                         </TouchableOpacity>
                                     </LinearGradient>
                                 </View>
+
+                                <View style={{ position: 'absolute', bottom: 10, right: 10 }}>
+                                    <Link href={`/explore/editRoutine?exerciseId=${exercise._id}`} asChild>
+                                        <TouchableOpacity>
+                                            <Image
+                                                source={require('@/assets/images/settings.png')}
+                                                style={{ height: 30, width: 30 }}
+                                            />
+                                        </TouchableOpacity>
+                                    </Link>
+                                </View>
+
+
 
                             </Card>
                         </View>
