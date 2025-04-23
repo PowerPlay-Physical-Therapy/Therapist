@@ -78,7 +78,7 @@ export default function ExploreScreen() {
                                                 <TouchableOpacity onPress={() => {
                                                     // console.log("clicked");
 
-                                                    router.push(`./explore/routineDetails?exerciseId=${JSON.stringify(exercise._id)}`);
+                                                    router.push(`./routineDetails?exerciseId=${JSON.stringify(exercise._id)}`);
 
                                                 }} key={index3}>
                                                     <View style={{ alignItems: "center", justifyContent: "flex-end", margin: 5, borderRadius: 15, zIndex: 0, shadowOffset: { height: 0.2, width: 0.2 }, shadowRadius: 3, shadowOpacity: 0.5 }}>

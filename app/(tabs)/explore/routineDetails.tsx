@@ -32,6 +32,7 @@ export default function RoutineDetails() {
     const [therapistId, setTherapistId] = useState<string | null>(null);
 
     const [notification, setNotification] = useState(null);
+    const [isLiked, setIsLiked] = useState(false);
 
     const showNotification = () => {
         setNotification({ message: "Adding New Routine!!", type: "info" });
@@ -69,7 +70,6 @@ export default function RoutineDetails() {
 
     const handleAddRoutine = async () => {
         showNotification();
-        // Toast.show({ text1: "Hello", type: "success" })
         if (!user || !isLoaded) {
             return;
         }
@@ -128,6 +128,35 @@ export default function RoutineDetails() {
             setError("Failed to adding routines");
         }
     }
+
+    const handleLikePress = () => {
+        setIsLiked(!isLiked);
+        const toggleFavorite = async (therapistId, exerciseId) => {
+            try {
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_favorites/${therapistId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        exerciseId: exerciseId
+                    })
+                });
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                throw error;
+            }
+        };
+        toggleFavorite(user?.id, exercise_id);
+    };
+
+    const handleAssignPress = () => {
+        // TODO: Implement assign functionality
+        console.log("Assign button pressed");
+    };
 
     return (
         <LinearGradient style={{ height: height }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
@@ -194,17 +223,33 @@ export default function RoutineDetails() {
                     ))}
                 </ScrollView>
 
-                <LinearGradient
-                    colors={[AppColors.Purple, AppColors.Blue]}
-                    style={[styles.button, { margin: 10, justifyContent: 'flex-end', alignItems: 'center' }]}
-                >
-                    <TouchableOpacity
-                        style={styles.buttonInner}
-                        onPress={handleAddRoutine}
-                    >
-                        <ThemedText style={styles.buttonText}>Add</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', paddingHorizontal: 20, marginBottom: 20}}>
+                    <TouchableOpacity onPress={handleLikePress}>
+                        <Image
+                            source={isLiked ? require('@/assets/images/heart-fill.png') : require('@/assets/images/heart.png')}
+                            resizeMode="contain"
+                            style={{ height: 35, width: 30, margin: 10, tintColor: isLiked ? AppColors.Pink : undefined }}
+                        />
                     </TouchableOpacity>
-                </LinearGradient>
+
+                    <TouchableOpacity onPress={handleAssignPress} style={{ marginHorizontal: 20 }}>
+                        <LinearGradient
+                            colors={[AppColors.Purple, AppColors.Blue]}
+                            style={[styles.button, { margin: 0, width: 120 }]}
+                        >
+                            <View style={styles.buttonInner}>
+                                <ThemedText style={styles.buttonText}>Assign</ThemedText>
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={handleAddRoutine}>
+                        <Image
+                            source={require('@/assets/images/add.png')}
+                            style={{ height: 30, width: 30 }}
+                        />
+                    </TouchableOpacity>
+                </View>
             </View>
 
         </LinearGradient>
