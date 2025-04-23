@@ -1,3 +1,4 @@
+
 import {
   Image,
   StyleSheet,
@@ -63,6 +64,7 @@ export default function HomeScreen() {
       const route = viewFavorites
                     ? `/therapist/get_favorite_routines/${therapistId}`
                     : `/therapist/get_custom_routines/${therapistId}`;
+
                 const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}${route}`);
 
       // Throw an error if the response is not successful
@@ -83,7 +85,7 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchCustomRoutines();
     updateUser();
-  }, [isLoaded, user]);
+  }, [isLoaded, user, viewFavorites]);
 
   
     const updateUser = async () => {
@@ -115,7 +117,6 @@ export default function HomeScreen() {
     }
   
 
-
   // Display the error message
   if (error) {
     return (
@@ -134,6 +135,7 @@ export default function HomeScreen() {
                 title={viewFavorites ? "Favorites" : "Home Library"}
                 leftButton={null}
                 showRight={true}
+
                 rightButton={
                     <TouchableOpacity onPress={() => setViewFavorites(prev => !prev)}>
                       <Image
@@ -199,6 +201,9 @@ export default function HomeScreen() {
                         {exercise.sets}
                       </Text>
                     </View>
+                    <TouchableOpacity onPress={() => console.log("Heart toggle placeholder")}> 
+                                            <Image source={require('@/assets/images/heart-outline.png')} style={{ width: 24, height: 24 }} />
+                     </TouchableOpacity>
                   </View>
                 )}
               />

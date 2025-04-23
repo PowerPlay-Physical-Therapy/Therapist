@@ -177,10 +177,21 @@ export default function ManagePatients() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
           {filteredPatients.map((patient) => (
             <View key={patient.id} style={styles.patientItem}>
-              <View style={styles.patientInfo}>
+              <TouchableOpacity
+                onPress={() => router.push({
+                  pathname: '/profile/patient_info',
+                  params: {
+                    patientId: patient.id,
+                    therapistId: user?.id,
+                    name: patient.name,
+                    imageUrl: patient.imageUrl?.uri ?? ''
+                  }
+                })}
+                style={styles.patientInfo}
+              >
                 <Image source={patient.imageUrl} style={styles.patientImage} />
                 <ThemedText style={styles.patientName}>{patient.name}</ThemedText>
-              </View>
+              </TouchableOpacity>
               {patient.status === 'pending' ? (
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <LinearGradient colors={["#B39DDB", "#81D4FA"]} style={styles.removeButtonGradient}>

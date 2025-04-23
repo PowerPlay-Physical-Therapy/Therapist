@@ -14,17 +14,30 @@ import { setStatusBarTranslucent } from 'expo-status-bar';
 import { SearchBar, Skeleton } from '@rneui/themed';
 import { BlurView } from 'expo-blur'
 import { useRouter } from "expo-router";
-
+import { useUser } from '@clerk/clerk-expo'; 
 
 const { height, width } = Dimensions.get("window")
 
 export default function ExploreScreen() {
+    const { isSignedIn, user, isLoaded } = useUser();
     const router = useRouter();
     const [exploreAll, setExploreAll] = useState([])
     const [search, setSearch] = useState("");
     const [filteredResults, setFilteredResults] = useState([]);
 
-    // const exploreAll = require('@/assets/Exercises.json');
+    const toggleFavorite = async (routineId: string) => {
+        if (!user?.id) return;
+        try {
+            await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/toggle_favorite/${user.id}/${routineId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            console.log("Toggled favorite for:", routineId);
+        } catch (error) {
+            console.error("Failed to toggle favorite:", error);
+        }
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -76,13 +89,15 @@ export default function ExploreScreen() {
                                         <ScrollView horizontal={true}>
                                             {subcategory["exercises"].map((exercise: any, index3: any) => (
                                                 <TouchableOpacity onPress={() => {
-                                                    // console.log("clicked");
-
                                                     router.push(`./explore/routineDetails?exerciseId=${JSON.stringify(exercise._id)}`);
-
                                                 }} key={index3}>
                                                     <View style={{ alignItems: "center", justifyContent: "flex-end", margin: 5, borderRadius: 15, zIndex: 0, shadowOffset: { height: 0.2, width: 0.2 }, shadowRadius: 3, shadowOpacity: 0.5 }}>
                                                         <Image source={{ uri: exercise.thumbnail_url }} style={{ width: width * 0.5, height: height * 0.2, borderRadius: 15, zIndex: 2 }} />
+                                                        <View style={{ position: 'absolute', top: 8, right: 8, zIndex: 5 }}>
+                                                            <TouchableOpacity onPress={() => toggleFavorite(exercise._id?.$oid)}>
+                                                                <Image source={require('@/assets/images/heart-outline.png')} style={{ width: 24, height: 24 }} />
+                                                            </TouchableOpacity>
+                                                        </View>
                                                         <ThemedText style={{fontWeight: 'bold', position: "absolute", zIndex: 3, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: 2.5, margin: 4 }} >{exercise.name}</ThemedText>
                                                     </View>
                                                 </TouchableOpacity>
@@ -101,7 +116,6 @@ export default function ExploreScreen() {
                             <Skeleton width={width * 0.9} height={height * 0.2} animation='wave' style={{ margin: 5, borderRadius: 15 }} />
                         </ScrollView>
                     </View>
-
                 )}
             </ScrollView>
         </LinearGradient>
@@ -114,9 +128,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: '100%',
     },
-    search: {
-        // Add your search bar styles here
-    },
+    search: {},
     categoryTitle: {
         fontSize: 18,
         fontWeight: 'bold',
