@@ -1,86 +1,47 @@
 import { Image, StyleSheet, TouchableOpacity, Platform, TextInput, SafeAreaView } from 'react-native';
-import { useState } from 'react';
-// import { HelloWave } from '@/components/HelloWave';
+import { useState, useEffect } from 'react';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import ScreenHeader from '@/components/ScreenHeader';
-import { Collapsible } from '@/components/Collapsible';
-import { useEffect } from 'react';
-import { Link, useRouter } from "expo-router";
-import * as React from 'react';
-import { Text, View, FlatList } from 'react-native';
-import { IconSymbol } from '@/components/ui/IconSymbol.ios';
-
-
-
+import { FlatList, View, Text } from 'react-native';
 
 export default function HomeScreen() {
-    const { isSignedIn } = useAuth()
+    const { isSignedIn } = useAuth();
     const router = useRouter();
     const [therapistName, setTherapistName] = useState<string | null>(null);
     const [routines, setRoutines] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
     const { user, isLoaded } = useUser();
     const [therapistId, setTherapistId] = useState<string | null>(null);
-
-
-    const [isTabVisible, setIsTabVisible] = useState(true);
-    const [activeTab, setActiveTab] = useState(0);
-
-    const [isLoading, setIsLoading] = useState(true);
+    const [viewFavorites, setViewFavorites] = useState(false);
 
     useEffect(() => {
-        const fetchCustomRoutines = async () => {
-            if (!user || !isLoaded) {
-                return;
-            }
-    
-            // Display user id
-            const therapistId = user?.id;
-            console.log("userid:", user?.id);
-            setTherapistId(therapistId);
+        const fetchRoutines = async () => {
+            if (!user || !isLoaded) return;
+            const id = user.id;
+            setTherapistId(id);
             setTherapistName(user?.firstName || "Therapist");
-
-            // Error message if no therapistID is available
-            if (!therapistId) {
-                setError('Therapist ID is not defined');
-                return;
-            }
-
-            console.log("therapistid:", therapistId);
-
             try {
-                // fetch custom routines
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/get_custom_routines/${therapistId}`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-
-                // Throw an error if the response is not successful                
-                if (!response.ok) {
-                    throw new Error("Failed to fetch custom routines");
-                }
-
-                // Parse the response as JSON
+                const route = viewFavorites
+                    ? `/therapist/get_favorite_routines/${id}`
+                    : `/therapist/get_custom_routines/${id}`;
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}${route}`);
+                if (!response.ok) throw new Error("Failed to fetch routines");
                 const data = await response.json();
-                console.log("Fetched data:", data);
                 setRoutines(data);
-
             } catch (err) {
                 console.error("Error fetching routines:", err);
                 setError("Failed to fetch routines");
             }
         };
-        fetchCustomRoutines();
-    }, [isLoaded, user]);
-    
-    // Display the error message
+        fetchRoutines();
+    }, [isLoaded, user, viewFavorites]);
+
     if (error) {
         return (
             <View style={{ padding: 20 }}>
@@ -88,27 +49,39 @@ export default function HomeScreen() {
             </View>
         );
     }
-    
 
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
-            <ScreenHeader title="Home Library" logo={true} />
+            <ScreenHeader
+                title={viewFavorites ? "Favorites" : "Home Library"}
+                leftButton={null}
+                rightButton={
+                    <TouchableOpacity onPress={() => setViewFavorites(prev => !prev)}>
+                      <Image
+                        source={
+                          viewFavorites
+                            ? require('@/assets/images/heart-icon.png') // Filled heart image
+                            : require('@/assets/images/heart-outline.png') // Outline heart image
+                        }
+                        style={{ width: 24, height: 24 }}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  }
+                  
+            />
 
-
-            {/* Display each assigned routine */}
             <FlatList
                 data={routines}
-                keyExtractor={(item) => item._id["$oid"]}
+                keyExtractor={(item) => item._id["$oid"] || item._id}
                 style={{ padding: 20, marginBottom: 80 }}
-                renderItem={({ item: routine }) => (            
+                renderItem={({ item: routine }) => (
                     <View style={styles.routine}>
                         <Text style={styles.routineTitle}>{routine.name}</Text>
-                    
-                        {/* Exercises within routine */}
                         <View style={styles.exerciseList}>
                             <FlatList
                                 data={routine.exercises}
-                                keyExtractor={(exercise) => exercise._id["$oid"]}
+                                keyExtractor={(exercise) => exercise._id["$oid"] || exercise._id}
                                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                                 renderItem={({ item: exercise }) => (
                                     <View style={styles.exerciseItem}>
@@ -124,69 +97,31 @@ export default function HomeScreen() {
                                                 {exercise.sets}
                                             </Text>
                                         </View>
-
-                                        <Image source={require('@/assets/images/chevron-right.png')} style={{width: 20, height: 20}} />
+                                        <TouchableOpacity onPress={() => console.log("Heart toggle placeholder")}> 
+                                            <Image source={require('@/assets/images/heart-outline.png')} style={{ width: 24, height: 24 }} />
+                                        </TouchableOpacity>
                                     </View>
                                 )}
                             />
                         </View>
                     </View>
-                
                 )}
             />
 
-            <TouchableOpacity style={styles.addButton} onPress={() => {
-                console.log("Navigating to Custom Routine screen");
-                router.push(`./home/customRoutine`);
-            }}>
+            <TouchableOpacity style={styles.addButton} onPress={() => router.push(`./home/customRoutine`)}>
                 <Text style={styles.addButtonText}>+</Text>
             </TouchableOpacity>
-
         </LinearGradient>
-
     );
-    
 }
 
-
 const styles = StyleSheet.create({
-    title: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-    },
-
-
-    text: {
-        fontSize: 24,
-        fontWeight: "bold",
-    },
-
-
-    routine: {
-        marginVertical: 10,
-        padding: 15,
-        borderRadius: 10,
-    },
-
-
-    routineTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-    },
-
-
-    routineList: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-
-
-    exerciseInfo: {
-        flex: 1,
-    },
-
-
+    title: { alignItems: 'center', justifyContent: 'center', height: '100%' },
+    text: { fontSize: 24, fontWeight: "bold" },
+    routine: { marginVertical: 10, padding: 15, borderRadius: 10 },
+    routineTitle: { fontSize: 18, fontWeight: "bold" },
+    routineList: { flexDirection: "row", alignItems: "center" },
+    exerciseInfo: { flex: 1 },
     exerciseList: {
         marginTop: 10,
         backgroundColor: AppColors.OffWhite,
@@ -194,72 +129,15 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 15,
     },
-
-
-    exerciseThumbnail: {
-        width: 82,
-        height: 76,
-        borderRadius: 5,
-        marginRight: 10,
-    },
-
-
-    exerciseName: {
-        fontSize: 16,
-        fontWeight: "bold",
-        marginBottom: 5,
-    },
-
-
-    exerciseDetails: {
-        fontSize: 14,
-        fontWeight: "bold",
-        color: "black",
-        marginLeft: 4,
-    },
-
-
-    exerciseItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 10,
-    },
-
-
-    separator: {
-        height: 1,
-        backgroundColor: "#9BB4D6",
-        marginVertical: 5,
-        width: "100%",
-    },
-
-
-    bottomView: {
-        backgroundColor: "white",
-        alignSelf: "center",
-    },
-
-    // addButton: {
-    //     position: "absolute",
-    //     bottom: Platform.OS === 'ios' ? 100 : 90,
-    //     right: 20,
-    //     width: 50,
-    //     height: 50,
-    //     borderRadius: 30,
-    //     justifyContent: "center",
-    //     alignItems: "center",
-    //     shadowColor: "black",
-    //     shadowOffset: { width: 0, height: 2 },
-    //     shadowOpacity: 0.3,
-    //     shadowRadius: 2,
-    //     zIndex: 1000,
-    //     elevation: 5,
-    //     backgroundColor: 'red',
-    // },
-
+    exerciseThumbnail: { width: 82, height: 76, borderRadius: 5, marginRight: 10 },
+    exerciseName: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
+    exerciseDetails: { fontSize: 14, fontWeight: "bold", color: "black", marginLeft: 4 },
+    exerciseItem: { flexDirection: "row", alignItems: "center", paddingVertical: 10, gap: 8 },
+    separator: { height: 1, backgroundColor: "#9BB4D6", marginVertical: 5, width: "100%" },
+    bottomView: { backgroundColor: "white", alignSelf: "center" },
     addButton: {
         position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 100 : 90, // Adjust for iOS and Android
+        bottom: Platform.OS === 'ios' ? 100 : 90,
         left: '50%',
         transform: [{ translateX: -30 }],
         width: 60,
@@ -277,18 +155,6 @@ const styles = StyleSheet.create({
         elevation: 5,
         zIndex: 1000,
     },
-    
-
-    addButtonText: {
-        color: "black",
-        fontSize: 24,
-        fontWeight: "bold",
-    },
-
-    errorText: {
-        color: 'red',
-        fontSize: 12,
-        marginLeft: 15,
-        marginTop: 5,
-    },
+    addButtonText: { color: "black", fontSize: 24, fontWeight: "bold" },
+    errorText: { color: 'red', fontSize: 12, marginLeft: 15, marginTop: 5 },
 });
