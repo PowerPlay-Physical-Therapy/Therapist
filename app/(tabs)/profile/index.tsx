@@ -11,7 +11,21 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { Alert } from 'react-native';
 import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import * as React from 'react';
+
+async function schedulePushNotification() {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "PowerPlay misses you!",
+        body: 'Log into the app to stay on track with your fitness goals!',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 2,
+      },
+    });
+  }
 
 
 export default function ProfileScreen() {
@@ -22,6 +36,18 @@ export default function ProfileScreen() {
     const [image, setImage] = useState(user?.imageUrl);
     const [username, setUsername] = useState("");
     const [notifications, setNotifications] = useState(false);
+
+    const toggleNotifications = () => {
+        
+        if (!notifications) {
+            schedulePushNotification();
+            setNotifications(!notifications);
+        } else {
+            Notifications.cancelAllScheduledNotificationsAsync();
+            setNotifications(!notifications);
+        }
+    }
+
     useEffect(() => {
         const fetchDebugInfo = async () => {
           try {
@@ -36,9 +62,6 @@ export default function ProfileScreen() {
         fetchDebugInfo();
       }, []);
     
-    const toggleNotifications = () => {
-        setNotifications(!notifications);
-    }
 
     const handleSignOut = async () => {
         try {
@@ -135,8 +158,8 @@ export default function ProfileScreen() {
             <ScrollView style={{ flex: 1, marginBottom: 80 }}>
                 <LinearGradient start={{ x: 0, y: 0.25 }} end={{ x: 0.5, y: 1 }} style={styles.buttonContainer} colors={[AppColors.LightBlue, AppColors.OffWhite]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', width: '100%', marginBottom: 20 }}>
+                        <View style={{ flexDirection: 'row', }}>
                         <ThemedView style={styles.headerImage}>
-
                             <Image
                                 source={{ uri: image }}
                                 resizeMode="contain"
@@ -150,6 +173,7 @@ export default function ProfileScreen() {
                                 resizeMode="contain"
                             />
                         </Pressable>
+                        </View>
                         <View style={{ alignSelf: 'center', paddingTop: 30 }}>
                             {isEditing ? (
                                 <TextInput
@@ -184,8 +208,10 @@ export default function ProfileScreen() {
                             </Pressable>
                         </View>
                     </View>
+                    <View style={{padding: 20}}>
                     <ThemedText style={styles.text}>Email: {user?.primaryEmailAddress?.emailAddress}</ThemedText>
-                    <ThemedText style={styles.text}>Password: Replace this with user password</ThemedText>
+                    <ThemedText style={styles.text}>Password: *********</ThemedText>
+                    </View>
                     <LinearGradient
                         colors={[AppColors.Purple, AppColors.Blue]}
                         style={styles.button}
@@ -291,7 +317,9 @@ const styles = StyleSheet.create({
     },
     pen: {
         position: 'relative',
-        right: 50,
+        right: 30,
+        width: 24,
+        height: 24,
     },
     profileImage: {
         width: 100,
@@ -300,6 +328,7 @@ const styles = StyleSheet.create({
     },
     text: {
         fontSize: 20,
+        paddingTop: 12,
     },
     cog: {
         position: 'relative',
