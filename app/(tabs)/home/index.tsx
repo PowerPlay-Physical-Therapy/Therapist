@@ -62,8 +62,9 @@ export default function HomeScreen() {
     try {
       // fetch custom routines
       const route = viewFavorites
-                    ? `/therapist/get_favorite_routines/${id}`
-                    : `/therapist/get_custom_routines/${id}`;
+                    ? `/therapist/get_favorite_routines/${therapistId}`
+                    : `/therapist/get_custom_routines/${therapistId}`;
+
                 const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}${route}`);
 
       // Throw an error if the response is not successful
@@ -133,6 +134,8 @@ export default function HomeScreen() {
       <ScreenHeader
                 title={viewFavorites ? "Favorites" : "Home Library"}
                 leftButton={null}
+                showRight={true}
+
                 rightButton={
                     <TouchableOpacity onPress={() => setViewFavorites(prev => !prev)}>
                       <Image
@@ -146,7 +149,6 @@ export default function HomeScreen() {
                       />
                     </TouchableOpacity>
                   }
-                  
             />
 
       {!routines && (
