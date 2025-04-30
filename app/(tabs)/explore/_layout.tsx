@@ -4,8 +4,8 @@ import { Stack } from "expo-router";
 export default function ExploreLayout() {
     return (
         <Stack>
-            <Stack.Screen name="editRoutine" options={{ headerShown: true, headerBackTitle: 'Explore', title: 'Edit Routine' }} />
             <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="editRoutine" options={{ headerShown: true, headerBackTitle: 'Explore', title: 'Edit Routine' }} />
             <Stack.Screen name="routineDetails" options={{ headerShown: true, headerBackTitle: 'Explore', title: 'Routine Detail' }} />
             <Stack.Screen name="assignRoutine" options={{ headerShown: true, headerBackTitle: 'Explore', title: 'Assign Routine' }} />
         </Stack>
