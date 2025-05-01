@@ -36,22 +36,6 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState("");
   const [filteredResults, setFilteredResults] = useState([]);
 
-  const toggleFavorite = async (routineId: string) => {
-    if (!user?.id) return;
-    try {
-      await fetch(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/toggle_favorite/${user.id}/${routineId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      console.log("Toggled favorite for:", routineId);
-    } catch (error) {
-      console.error("Failed to toggle favorite:", error);
-    }
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -181,16 +165,7 @@ export default function ExploreScreen() {
                                       zIndex: 5,
                                     }}
                                   >
-                                    <TouchableOpacity
-                                      onPress={() =>
-                                        toggleFavorite(exercise._id?.$oid)
-                                      }
-                                    >
-                                      <Image
-                                        source={require("@/assets/images/heart-outline.png")}
-                                        style={{ width: 24, height: 24 }}
-                                      />
-                                    </TouchableOpacity>
+              
                                   </View>
                                   <ThemedText
                                     style={{

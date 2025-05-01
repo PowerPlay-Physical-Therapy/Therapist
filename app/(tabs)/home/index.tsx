@@ -125,14 +125,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchCustomRoutines();
-  }, [isLoaded, user, viewFavorites]);
-
-  
-  const refreshPage = async () => {
-    setIsRefreshing(true);
-    await fetchCustomRoutines();
-    setIsRefreshing(false);
-  }
+  }, []);
 
   const onRefresh = async () => {
         setIsRefreshing(true);
@@ -158,6 +151,7 @@ export default function HomeScreen() {
       <ScreenHeader
                 title={viewFavorites ? "Favorites" : "Home Library"}
                 leftButton={null}
+                showLeft={true}
                 showRight={true}
 
                 rightButton={
@@ -187,6 +181,7 @@ export default function HomeScreen() {
                     <ThemedText style={{ alignSelf: 'center', color : 'black', paddingTop: 80}}>No Routines Added</ThemedText>
                 </View>
                 </ScrollView>)}
+
       {routines && routines.length > 0 && (
       <FlatList
         refreshing={isRefreshing}
