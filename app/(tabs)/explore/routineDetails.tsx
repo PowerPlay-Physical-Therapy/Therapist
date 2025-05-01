@@ -129,29 +129,6 @@ export default function RoutineDetails() {
         }
     }
 
-    const handleLikePress = () => {
-        setIsLiked(!isLiked);
-        const toggleFavorite = async (therapistId, exerciseId) => {
-            try {
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_favorites/${therapistId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        exerciseId: exerciseId
-                    })
-                });
-
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error toggling favorite:', error);
-                throw error;
-            }
-        };
-        toggleFavorite(user?.id, exercise_id);
-    };
 
     const handleAssignPress = () => {
         // TODO: Implement assign functionality
@@ -160,11 +137,11 @@ export default function RoutineDetails() {
     };
 
     return (
-        <LinearGradient style={{ height: height }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
+        <LinearGradient style={{ flex: 1, height: height, justifyContent: 'center', alignItems: 'center' }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             {notification && (
                 <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />
             )}
-            <View style={{ width: width, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{width: width, justifyContent: 'center', alignItems: 'center' }}>
                 <ScrollView
                     horizontal={true}
                     decelerationRate={0}
@@ -224,19 +201,12 @@ export default function RoutineDetails() {
                     ))}
                 </ScrollView>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', paddingHorizontal: 20, marginBottom: 20}}>
-                    <TouchableOpacity onPress={handleLikePress}>
-                        <Image
-                            source={isLiked ? require('@/assets/images/heart-fill.png') : require('@/assets/images/heart.png')}
-                            resizeMode="contain"
-                            style={{ height: 35, width: 30, margin: 10, tintColor: isLiked ? AppColors.Pink : undefined }}
-                        />
-                    </TouchableOpacity>
+                <View style={{ paddingBottom: 100, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', marginTop: 20 }}>
 
-                    <TouchableOpacity onPress={handleAssignPress} style={{ marginHorizontal: 20 }}>
+                    <TouchableOpacity onPress={handleAssignPress} style={{ marginHorizontal: 20, width: '40%' }}>
                         <LinearGradient
                             colors={[AppColors.Purple, AppColors.Blue]}
-                            style={[styles.button, { margin: 0, width: 120 }]}
+                            style={[styles.button, { margin: 0, width: '100%' }]}
                         >
                             <View style={styles.buttonInner}>
                                 <ThemedText style={styles.buttonText}>Assign</ThemedText>
@@ -244,11 +214,15 @@ export default function RoutineDetails() {
                         </LinearGradient>
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={handleAddRoutine}>
-                        <Image
-                            source={require('@/assets/images/add.png')}
-                            style={{ height: 30, width: 30 }}
-                        />
+                    <TouchableOpacity onPress={handleAddRoutine} style={{ marginHorizontal: 20, width: '40%' }}>
+                        <LinearGradient
+                            colors={[AppColors.Purple, AppColors.Blue]}
+                            style={[styles.button, { margin: 0, width: '100%' }]}
+                        >
+                            <View style={styles.buttonInner}>
+                                <ThemedText style={styles.buttonText}>Add to Library</ThemedText>
+                            </View>
+                        </LinearGradient>
                     </TouchableOpacity>
                 </View>
             </View>

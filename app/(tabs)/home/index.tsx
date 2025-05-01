@@ -6,7 +6,8 @@ import {
   Platform,
   TextInput,
   SafeAreaView,
-  ScrollView
+  ScrollView,
+  Modal
 } from "react-native";
 import { useState } from "react";
 // import { HelloWave } from '@/components/HelloWave';
@@ -26,6 +27,7 @@ import * as React from "react";
 import { Text, View, FlatList } from "react-native";
 import { IconSymbol } from "@/components/ui/IconSymbol.ios";
 import capitalizeWords from "@/utils/capitalizeWords";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function HomeScreen() {
   const { isSignedIn } = useAuth();
@@ -40,6 +42,21 @@ export default function HomeScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [viewFavorites, setViewFavorites] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+
+  const toggleFavorite = async (routineId: string) => {
+    if (!user?.id) return;
+    try {
+        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/toggle_favorite/${user.id}/${routineId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        console.log("Toggled favorite for:", routineId);
+        onRefresh(); // Refresh the list after toggling favorite
+    } catch (error) {
+        console.error("Failed to toggle favorite:", error);
+    }
+};
 
   const fetchCustomRoutines = async () => {
     if (!user || !isLoaded) {
@@ -57,15 +74,10 @@ export default function HomeScreen() {
       return;
     }
 
-    console.log("therapistid:", therapistId);
 
     try {
-      // fetch custom routines
-      const route = viewFavorites
-                    ? `/therapist/get_favorite_routines/${therapistId}`
-                    : `/therapist/get_custom_routines/${therapistId}`;
 
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}${route}`);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/get_custom_routines/${therapistId}`);
 
       // Throw an error if the response is not successful
       if (!response.ok) {
@@ -76,20 +88,17 @@ export default function HomeScreen() {
       const data = await response.json();
       console.log("Fetched data:", data);
       setRoutines(data);
-    } catch (err) {
-      console.error("Error fetching routines:", err);
-      setError("Failed to fetch routines");
-    }
-  };
 
-  useEffect(() => {
-    fetchCustomRoutines();
-    updateUser();
-  }, [isLoaded, user, viewFavorites]);
+      const response3 = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/get_favorite_routines/${therapistId}`);
+      if (!response3.ok) {
+        throw new Error("Failed to fetch favorite routines");
+      }
 
-  
-    const updateUser = async () => {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
+      const data3 = await response3.json();
+      console.log("Fetched favorite routines:", data3);
+      setFavorites(data3)
+
+      const response2 = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -104,13 +113,21 @@ export default function HomeScreen() {
         }),
       }) 
 
-      if (!response.ok) {
+      if (!response2.ok) {
         throw new Error('Failed to update user');
       }
       console.log('User updated successfully!');
+    } catch (err) {
+      console.error("Error fetching routines:", err);
+      setError("Failed to fetch routines");
     }
+  };
 
-      const onRefresh = async () => {
+  useEffect(() => {
+    fetchCustomRoutines();
+  }, []);
+
+  const onRefresh = async () => {
         setIsRefreshing(true);
         await fetchCustomRoutines();
         setIsRefreshing(false);
@@ -134,6 +151,7 @@ export default function HomeScreen() {
       <ScreenHeader
                 title={viewFavorites ? "Favorites" : "Home Library"}
                 leftButton={null}
+                showLeft={true}
                 showRight={true}
 
                 rightButton={
@@ -163,20 +181,24 @@ export default function HomeScreen() {
                     <ThemedText style={{ alignSelf: 'center', color : 'black', paddingTop: 80}}>No Routines Added</ThemedText>
                 </View>
                 </ScrollView>)}
+
       {routines && routines.length > 0 && (
       <FlatList
         refreshing={isRefreshing}
         onRefresh={onRefresh}
-        data={routines}
+        data={viewFavorites? favorites : routines}
         keyExtractor={(item) => item._id}
         style={{ padding: 8, marginBottom: 80 }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item: routine }) => (
           <View style={styles.routine}>
-            <Text style={styles.routineTitle}>{capitalizeWords(routine.name)}
-              
+            <View style={{flexDirection: "row", justifyContent: "space-between", alignItems: "center"}}>
+            <Text style={styles.routineTitle}>{routine.name? capitalizeWords(routine.name) : "No Routine Name Provided"}
             </Text>
-
+            <TouchableOpacity onPress={() => toggleFavorite(routine._id)}> 
+                                            <Image source={(viewFavorites || favorites.some((favorite) => favorite._id === routine._id))? require('@/assets/images/heart-icon.png') : require('@/assets/images/heart-outline.png')} style={{ width: 24, height: 24 }} />
+                     </TouchableOpacity>
+</View>
             {/* Exercises within routine */}
             <View style={styles.exerciseList}>
               <FlatList
@@ -201,9 +223,7 @@ export default function HomeScreen() {
                         {exercise.sets}
                       </Text>
                     </View>
-                    <TouchableOpacity onPress={() => console.log("Heart toggle placeholder")}> 
-                                            <Image source={require('@/assets/images/heart-outline.png')} style={{ width: 24, height: 24 }} />
-                     </TouchableOpacity>
+                    
                   </View>
                 )}
               />
@@ -249,11 +269,38 @@ export default function HomeScreen() {
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
       </Link>
+      <Modal 
+      transparent={true}
+      visible={isRefreshing}
+      >
+        <View style={{flex: 1, justifyContent: "center", alignItems: "center"}}>
+
+            <View style={styles.modalView}>
+              <ThemedText style={{fontSize: 16}}>Updating...</ThemedText>
+              <LoadingSpinner color={AppColors.Blue} durationMs={1000}/>
+            </View>
+          </View>
+      </Modal>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  modalView: {
+    margin: 20,
+    backgroundColor: AppColors.OffWhite,
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   buttonInner: {
     paddingVertical: 12,
     alignItems: "center",

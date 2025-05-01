@@ -113,7 +113,7 @@ export default function ManagePatients() {
 
   const connectPatient = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/patient/get_patient_by_email/?email=${email}`);
+      const res = await fetch(`${BACKEND_URL}/patient/get_patient_by_email/${email}`);
       if (!res.ok) throw new Error('Patient not found');
       const patient = await res.json();
       const response = await fetch(`${BACKEND_URL}/connect_patient_therapist/${patient._id}/${user?.id}`, {
