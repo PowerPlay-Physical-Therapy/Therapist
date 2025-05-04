@@ -79,6 +79,14 @@ export default function MessageLayout() {
                 headerTitle: patient ? `${patient.firstname} ${patient.lastname}` : 'Chat',
                 headerRight: renderHeaderRight
             }} />
+            <Stack.Screen name="exerciseHistory" options={{
+                headerStyle: {
+                    backgroundColor: AppColors.OffWhite,
+                },
+                headerShown: true,
+                headerBackTitle: 'Patient Info',
+                title: "Exercise History",
+            }} />
             <Stack.Screen name="video" options={{
                 headerStyle: {
                     backgroundColor: AppColors.OffWhite,
