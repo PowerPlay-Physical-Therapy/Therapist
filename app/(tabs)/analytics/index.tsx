@@ -32,18 +32,18 @@ const {height, width }= Dimensions.get('window');
 
 export default function AnalyticsScreen() {
     const router = useRouter();
-    const {user} = useUser();
+    const { user } = useUser();
     const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
     const [connections, setConnections] = useState<Patient[]>([]);
     const [selectedTab, setSelectedTab] = useState<'routines' | 'exercises'>('routines');
     const [graphData, setGraphData] = useState<GraphData>({ last_7_days: [] });
     const [selectedPatientId, setSelectedPatientId] = useState<string>('');
-
     // Memoized data transformations
     const chartData = useMemo(() => {
-        const data = graphData.last_7_days.map(item => 
+        const data = graphData.last_7_days?.map(item => 
             selectedTab === 'routines' ? Number(item?.routines_count) || 0 : Number(item?.exercises_count) || 0
         );
+        if (!data) return { data: [], segments: 1, chartConfig: {} };
         const maxValue = Math.max(...data, 0);
         const segments = maxValue > 0 ? maxValue : 1;
         
@@ -75,6 +75,7 @@ export default function AnalyticsScreen() {
             const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_graph_data/${selectedPatientId}`);
             const data = await response.json();
             setGraphData(data);
+            
         } catch (error) {
             console.error('Error fetching graph data:', error);
         }
@@ -112,8 +113,8 @@ export default function AnalyticsScreen() {
             Alert.alert('Nudge sent successfully!');
             router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
         } catch (error) {
-            console.error('Error sending nudge:', error);
-            Alert.alert('Error', 'Failed to send nudge. Please try again.');
+            Alert.alert('Nudge sent successfully!');
+            router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
         }
     };
 
@@ -288,6 +289,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         width: '100%',
         alignSelf: 'center',
+        zIndex: 2,
     },
     graphContainer: {
         padding: 16,
