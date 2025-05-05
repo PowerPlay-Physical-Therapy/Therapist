@@ -8,7 +8,7 @@ import { useAuth, useUser } from '@clerk/clerk-expo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import { useEffect } from 'react';
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import * as React from 'react';
 import { Text, View, FlatList, Dimensions, ScrollView, Modal } from 'react-native';
 import capitalizeWords from '@/utils/capitalizeWords';
@@ -17,13 +17,15 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 const { height, width } = Dimensions.get("window");
 
 export default function ExerciseHistory() {
+    const params = useLocalSearchParams();
+    console.log("ExerciseHistory params:", params);
     const { isSignedIn } = useAuth()
     const router = useRouter();
     const [patientName, setPatientName] = useState<string | null>(null);
     const [routines, setRoutines] = useState<any[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { user, isLoaded } = useUser();
-    const [patientId, setPatientId] = useState<string | null>(null);
+    const [patientId, setPatientId] = useState<string | null>(params?.patientId || null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isTabVisible, setIsTabVisible] = useState(true);
     const [activeTab, setActiveTab] = useState(0);
@@ -36,9 +38,6 @@ export default function ExerciseHistory() {
         }
 
         // Display user id
-        const patientId = user?.id;
-        console.log("userid:", user?.id);
-        setPatientId(patientId);
         setPatientName(user?.firstName || "Patient");
 
         // Error message if no patientId is available
@@ -147,10 +146,7 @@ export default function ExerciseHistory() {
                                                 <Text style={styles.exerciseDetails}>Sets: </Text>
                                                 {exercise.sets}
                                             </ThemedText>
-                                        </View>
-                                        <Link href={`/home/editRoutine?routineId=${routine._id}`}>
-                                            <Image source={require('@/assets/images/chevron-right.png')} style={{width: 20, height: 20}}/>
-                                        </Link>                                    
+                                        </View>                          
                                     </View>
                                 
                                 </Link>

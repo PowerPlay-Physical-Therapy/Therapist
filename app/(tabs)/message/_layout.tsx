@@ -1,10 +1,10 @@
 import { AppColors } from "@/constants/Colors";
-import { Stack, useLocalSearchParams, router } from "expo-router";
+import { Stack, useGlobalSearchParams, router } from "expo-router";
 import { View, Image, TouchableOpacity } from "react-native";
 import { useEffect, useState } from "react";
 
 type SearchParams = {
-    chat: string;
+    patientId: string;
 };
 
 type Patient = {
@@ -14,11 +14,10 @@ type Patient = {
 };
 
 export default function MessageLayout() {
-    const params = useLocalSearchParams<SearchParams>();
+    const params = useGlobalSearchParams<SearchParams>();
     console.log("Layout params:", params);
-    const { chat} = params;
+    const patientId = params.patientId;
     // Extract the ID portion if it's a full user ID format
-    const patientId =  chat;
     console.log("Processed patientId in layout:", patientId);
     const [patient, setPatient] = useState<Patient | null>(null);
 
@@ -59,7 +58,7 @@ export default function MessageLayout() {
                         height: 30,
                         marginRight: 15,
                         tintColor: AppColors.Black,
-                        backgroundColor: 'red'
+                        
                     }} 
                     source={require("@/assets/images/info.png")}
                 />
@@ -79,14 +78,7 @@ export default function MessageLayout() {
                 headerTitle: patient ? `${patient.firstname} ${patient.lastname}` : 'Chat',
                 headerRight: renderHeaderRight
             }} />
-            <Stack.Screen name="exerciseHistory" options={{
-                headerStyle: {
-                    backgroundColor: AppColors.OffWhite,
-                },
-                headerShown: true,
-                headerBackTitle: 'Patient Info',
-                title: "Exercise History",
-            }} />
+            
             <Stack.Screen name="video" options={{
                 headerStyle: {
                     backgroundColor: AppColors.OffWhite,
@@ -104,6 +96,14 @@ export default function MessageLayout() {
                 headerShown: true, 
                 headerBackTitle: 'Chat', 
                 title: 'Patient Info' 
+            }} />
+            <Stack.Screen name="exerciseHistory" options={{
+                headerStyle: {
+                    backgroundColor: AppColors.OffWhite,
+                },
+                headerShown: true,
+                headerBackTitle: 'Patient Info',
+                title: "Exercise History",
             }} />
         </Stack>
     );
