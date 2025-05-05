@@ -28,6 +28,7 @@ import { Text, View, FlatList } from "react-native";
 import { IconSymbol } from "@/components/ui/IconSymbol.ios";
 import capitalizeWords from "@/utils/capitalizeWords";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { SearchBar } from '@rneui/themed';
 
 export default function HomeScreen() {
   const { isSignedIn } = useAuth();
@@ -43,6 +44,8 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewFavorites, setViewFavorites] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [filteredRoutines, setFilteredRoutines] = useState<any[] | null>(null);
 
   const toggleFavorite = async (routineId: string) => {
     if (!user?.id) return;
@@ -127,6 +130,31 @@ export default function HomeScreen() {
     fetchCustomRoutines();
   }, []);
 
+  useEffect(() => {
+    if (!routines) return;
+  
+    const query = search.toLowerCase();
+
+    if (query.trim() === '') {
+      setFilteredRoutines(null); // fall back to full list
+      return;
+    }
+
+    const filtered = (viewFavorites ? favorites : routines).filter(routine => {
+      const routineNameMatch = routine.name?.toLowerCase().includes(query);
+      const categoryMatch = routine.category?.toLowerCase().includes(query);
+      const exerciseMatch = routine.exercises?.some((exercise: any) =>
+        exercise.title?.toLowerCase().includes(query)
+      );
+      return routineNameMatch || categoryMatch || exerciseMatch;
+    });
+  
+    setFilteredRoutines(filtered);
+  }, [search, routines, favorites, viewFavorites]);
+  
+  const routinesToDisplay = filteredRoutines ?? (viewFavorites ? favorites : routines);
+
+
   const onRefresh = async () => {
         setIsRefreshing(true);
         await fetchCustomRoutines();
@@ -155,6 +183,7 @@ export default function HomeScreen() {
                 showRight={true}
 
                 rightButton={
+                  <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center', marginRight: 60 }}>
                     <TouchableOpacity onPress={() => setViewFavorites(prev => !prev)}>
                       <Image
                         source={
@@ -166,8 +195,25 @@ export default function HomeScreen() {
                         resizeMode="contain"
                       />
                     </TouchableOpacity>
-                  }
+                  
+
+                    <Link href={`/home/customRoutine`} asChild>
+                      <TouchableOpacity onPress={() => {
+                        console.log("Navigating to Custom Routine screen");
+                      }}
+                      >
+                        <Image
+                          source={require('@/assets/images/add.png') }
+                          style={{ width: 20, height: 20, marginLeft: 16 }}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </Link>
+                  </View>
+                }
+
             />
+              <SearchBar round={true} containerStyle={{ backgroundColor: 'transparent', borderTopWidth: 0, borderBottomWidth: 0 }} inputContainerStyle={{ backgroundColor: AppColors.LightBlue }} placeholder='Search Routines/Categories' onChangeText={setSearch} value={search} />
 
       {!routines && (
                 <ScrollView style={{ flex: 1}}>  
@@ -183,10 +229,12 @@ export default function HomeScreen() {
                 </ScrollView>)}
 
       {routines && routines.length > 0 && (
+            
       <FlatList
         refreshing={isRefreshing}
         onRefresh={onRefresh}
-        data={viewFavorites? favorites : routines}
+        // data={viewFavorites? favorites : routines}
+        data={routinesToDisplay}
         keyExtractor={(item) => item._id}
         style={{ padding: 8, marginBottom: 80 }}
         showsVerticalScrollIndicator={false}
@@ -257,18 +305,6 @@ export default function HomeScreen() {
         )}
       />
       )}
-      <Link href={`/home/customRoutine`} asChild>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          console.log("Navigating to Custom Routine screen");
-          
-        }}
-      > 
-        
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
-      </Link>
       <Modal 
       transparent={true}
       visible={isRefreshing}
@@ -400,26 +436,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
-  // addButton: {
-  //     position: "absolute",
-  //     bottom: Platform.OS === 'ios' ? 100 : 90,
-  //     right: 20,
-  //     width: 50,
-  //     height: 50,
-  //     borderRadius: 30,
-  //     justifyContent: "center",
-  //     alignItems: "center",
-  //     shadowColor: "black",
-  //     shadowOffset: { width: 0, height: 2 },
-  //     shadowOpacity: 0.3,
-  //     shadowRadius: 2,
-  //     zIndex: 1000,
-  //     elevation: 5,
-  //     backgroundColor: 'red',
-  // },
-
   addButton: {
-    position: "absolute",
     bottom: Platform.OS === "ios" ? 100 : 90, // Adjust for iOS and Android
     left: "50%",
     transform: [{ translateX: -30 }],
@@ -437,6 +454,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 5,
     zIndex: 1000,
+    marginLeft: 20,
   },
 
   addButtonText: {
@@ -451,4 +469,8 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     marginTop: 5,
   },
+
+  search: {
+    // Add your search bar styles here
+  }
 });

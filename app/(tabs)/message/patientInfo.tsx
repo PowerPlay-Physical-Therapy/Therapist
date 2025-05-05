@@ -127,7 +127,7 @@ export default function PatientInfo() {
 
             <TouchableOpacity 
                 style={styles.actionButton}
-                onPress={() => router.push('/(tabs)/message/exerciseHistory')}
+                onPress={() => router.push(`/(tabs)/message/exerciseHistory?patientId=${patientId}`)}
             >
                 <ThemedText style={styles.actionButtonText}>Home Exercise History</ThemedText>
                 <Image 

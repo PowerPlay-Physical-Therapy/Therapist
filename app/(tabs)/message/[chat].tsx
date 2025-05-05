@@ -16,7 +16,7 @@ import {
 } from "react-native";
 
 type ChatParams = {
-    chat: string;
+    patientId: string;
 };
 
 type ChatMessage = {
@@ -34,7 +34,7 @@ export default function ChatMessagesScreen() {
     const { user } = useUser();
     const params = useLocalSearchParams<ChatParams>();
     console.log("Chat screen params:", params);
-    const { chat: patientId } = params;
+    const patientId = params.patientId;
     console.log("PatientId in chat screen:", patientId);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [patient, setPatient] = useState<any>(null);
