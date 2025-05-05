@@ -8,22 +8,47 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
 import { useState, useEffect } from 'react';
 import { Redirect, useRouter } from 'expo-router';
+import { BarChart } from 'react-native-chart-kit';
 
 const {height, width }= Dimensions.get('window');
-
-const mockData = [
-    { name: 'Jane Doe', status: 'on-track' },
-    { name: 'John Doe', status: 'off-track' },
-    { name: 'Johnson', status: 'on-track' },
-    { name: 'Grand Johnson', status: 'on-track' },
-];
-
 
 export default function AnalyticsScreen() {
     const router = useRouter();
     const {user} = useUser();
     const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
     const [connections, setConnections] = useState<any[]>([]);
+    const [selectedTab, setSelectedTab] = useState<'routines' | 'exercises'>('routines');
+    const [graphData, setGraphData] = useState<{ last_7_days: any[] }>({ last_7_days: [] });
+
+    useEffect(() => {
+        const fetchGraphData = async () => {
+            try {
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_graph_data/${therapistId}`);
+                const data = await response.json();
+                setGraphData(data);
+            } catch (error) {
+                console.error('Error fetching graph data:', error);
+            }
+        };
+        if (therapistId) fetchGraphData();
+    }, [therapistId]);
+
+    const routinesData = graphData.last_7_days.map(item => item.routines_count);
+    const exercisesData = graphData.last_7_days.map(item => item.exercises_count);
+    const labels = graphData.last_7_days.map(item => item.date.slice(5));
+
+    const currentData = selectedTab === 'routines' ? routinesData : exercisesData;
+    const maxValue = Math.max(...currentData, 0);
+    const segments = maxValue > 0 ? maxValue : 1;
+
+    const chartData = {
+        labels,
+        datasets: [
+            {
+                data: currentData,
+            }
+        ],
+    };
 
     const fetchConnections = async () => {
         try {
@@ -66,19 +91,44 @@ export default function AnalyticsScreen() {
             <ScreenHeader title="Patient Analytics" />
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
                 <View style={styles.graphContainer}>
-                    {/* Placeholder for graphs - we'll add actual graphs once you approve the chart library */}
-                    <View style={styles.graphPlaceholder}>
-                        <Text style={styles.graphText}>Patient Progress Graph</Text>
-                    </View>
+                        <BarChart
+                            data={chartData}
+                            width={width - 32}
+                            height={215}
+                            chartConfig={{
+                                backgroundColor: '#ffffff',
+                                backgroundGradientFrom: '#ffffff',
+                                backgroundGradientTo: '#ffffff',
+                                decimalPlaces: 0,
+                                color: (opacity = 1) => AppColors.Blue,
+                                fillShadowGradient: AppColors.Blue,
+                                fillShadowGradientOpacity: 1,
+                                style: {
+                                    borderRadius: 25
+                                },
+                                barPercentage: 0.5,
+                                propsForLabels: {
+                                    fontSize: 10
+                                }
+                            }}
+                            style={{
+                                marginVertical: 8,
+                                borderRadius: 16,
+                            }}
+                            yAxisLabel=""
+                            yAxisSuffix=""
+                            showBarTops={true}
+                            withInnerLines={false}
+                            withVerticalLabels={true}
+                            withHorizontalLabels={true}
+                            segments={segments}
+                        />
                     <View style={styles.tabContainer}>
-                        <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-                            <Text style={styles.activeTabText}>Weekly</Text>
+                        <TouchableOpacity style={[styles.tab, selectedTab === 'routines' && styles.activeTab]} onPress={() => setSelectedTab('routines')}>
+                            <Text style={selectedTab === 'routines' ? styles.activeTabText : styles.tabText}>Routines</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.tab}>
-                            <Text style={styles.tabText}>Comparison</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.tab}>
-                            <Text style={styles.tabText}>Future</Text>
+                        <TouchableOpacity style={[styles.tab, selectedTab === 'exercises' && styles.activeTab]} onPress={() => setSelectedTab('exercises')}>
+                            <Text style={selectedTab === 'exercises' ? styles.activeTabText : styles.tabText}>Exercises</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -96,12 +146,20 @@ export default function AnalyticsScreen() {
                                 </Text>
                             </View>
                             <View style={styles.buttons}>
-                                <TouchableOpacity 
-                                    style={styles.nudgeButton}
-                                    onPress={() => handleNudge(patient.expoPushToken, patient._id)}
-                                >
-                                    <Text style={styles.buttonText}>Nudge</Text>
-                                </TouchableOpacity>
+
+                            <LinearGradient
+                                        colors={[AppColors.Purple, AppColors.Blue]}
+                                        style={styles.button}
+                                    >
+                                        <TouchableOpacity
+                                            style={styles.buttonInner}
+                                            onPress={() => handleNudge(patient.expoPushToken, patient._id)}
+        
+                                        >
+                                            <ThemedText style={styles.buttonText}>Nudge</ThemedText>
+                                        </TouchableOpacity>
+                                    </LinearGradient>
+
                                 <TouchableOpacity 
                                     style={styles.viewButton}
                                     onPress={() => handleViewDetails(patient.name)}
@@ -236,8 +294,23 @@ const styles = StyleSheet.create({
         height: 16,
         tintColor: AppColors.Blue,
     },
+
+    buttonInner: {
+        padding: 5,
+        alignItems: 'center',
+        borderRadius: 20,
+    },
     buttonText: {
+        fontWeight: 'medium',
         color: 'white',
-        fontWeight: '500',
+    },
+    button: {
+        borderRadius: 25,
+        width: '50%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
 });
