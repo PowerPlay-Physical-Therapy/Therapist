@@ -121,7 +121,7 @@ export default function ProfileScreen() {
     const handleSave = React.useCallback(async () => {
         setIsEditing(!isEditing);
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/patient/update_patient/${user?.username}`, {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/update_therapist/${user?.username}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function ProfileScreen() {
                     firstname: user?.firstName,
                     lastname: user?.lastName,
                     email: user?.emailAddresses[0].emailAddress,
-                    image: image, 
+                    imageUrl: user?.imageUrl,
                 }),
             });
     

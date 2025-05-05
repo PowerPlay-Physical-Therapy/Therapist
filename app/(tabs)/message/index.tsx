@@ -66,12 +66,7 @@ export default function MessagesScreen() {
                         <TouchableOpacity style={styles.messageRow} onPress={() => {
                             const patientId = item["_id"];
                             console.log("Navigating with patientId:", patientId);
-                            router.push({
-                                pathname: "/message/[chat]",
-                                params: { 
-                                    chat: patientId,
-                                }
-                            });
+                            router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
                         }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Image source={{ uri: item?.imageUrl }} style={{

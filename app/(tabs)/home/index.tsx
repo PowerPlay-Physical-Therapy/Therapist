@@ -183,7 +183,7 @@ export default function HomeScreen() {
                 showRight={true}
 
                 rightButton={
-                  <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center', marginRight: 40 }}>
+                  <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center', marginRight: 60 }}>
                     <TouchableOpacity onPress={() => setViewFavorites(prev => !prev)}>
                       <Image
                         source={
@@ -204,7 +204,7 @@ export default function HomeScreen() {
                       >
                         <Image
                           source={require('@/assets/images/add.png') }
-                          style={{ width: 20, height: 20 }}
+                          style={{ width: 20, height: 20, marginLeft: 16 }}
                           resizeMode="contain"
                         />
                       </TouchableOpacity>
@@ -437,7 +437,6 @@ const styles = StyleSheet.create({
   },
 
   addButton: {
-    position: "absolute",
     bottom: Platform.OS === "ios" ? 100 : 90, // Adjust for iOS and Android
     left: "50%",
     transform: [{ translateX: -30 }],
@@ -455,6 +454,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 5,
     zIndex: 1000,
+    marginLeft: 20,
   },
 
   addButtonText: {
