@@ -1,10 +1,14 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { StyleSheet, Platform, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, Platform, View, Text, TouchableOpacity, ScrollView, Image, Dimensions, } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import ScreenHeader from '@/components/ScreenHeader';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '@clerk/clerk-expo';
+import { useState } from 'react';
+
+const {height, width }= Dimensions.get('window');
 
 const mockData = [
     { name: 'Jane Doe', status: 'on-track' },
@@ -14,8 +18,24 @@ const mockData = [
 ];
 
 export default function AnalyticsScreen() {
-    const handleNudge = (name: string) => {
-        console.log(`Nudged ${name}`);
+    const {user} = useUser();
+    const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
+    const [connections, setConnections] = useState<any[]>([]);
+
+    const fetchConnections = async () => {
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_connections/${therapistId}/therapist`);
+            const data = await response.json();
+            setConnections(data.connections);
+        } catch (error) {
+            console.error('Error fetching connections:', error);
+        }
+    }
+    const handleNudge = async (expoPushToken: string) => {
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/send_push_message/${expoPushToken}`)
+            const data = await response.json();
+        }
     };
 
     const handleViewDetails = (name: string) => {
@@ -25,7 +45,7 @@ export default function AnalyticsScreen() {
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <ScreenHeader title="Patient Analytics" />
-            <ScrollView style={styles.container}>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
                 <View style={styles.graphContainer}>
                     {/* Placeholder for graphs - we'll add actual graphs once you approve the chart library */}
                     <View style={styles.graphPlaceholder}>
