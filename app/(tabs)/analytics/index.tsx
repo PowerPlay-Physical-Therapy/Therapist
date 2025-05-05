@@ -6,9 +6,27 @@ import { AppColors } from '@/constants/Colors';
 import ScreenHeader from '@/components/ScreenHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Redirect, useRouter } from 'expo-router';
 import { BarChart } from 'react-native-chart-kit';
+import { Picker } from '@react-native-picker/picker';
+
+// Types
+type Patient = {
+    _id: string;
+    firstname: string;
+    lastname: string;
+    status: 'on-track' | 'off-track';
+    expoPushToken: string;
+};
+
+type GraphData = {
+    last_7_days: Array<{
+        date: string;
+        routines_count: number;
+        exercises_count: number;
+    }>;
+};
 
 const {height, width }= Dimensions.get('window');
 
@@ -16,40 +34,30 @@ export default function AnalyticsScreen() {
     const router = useRouter();
     const {user} = useUser();
     const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
-    const [connections, setConnections] = useState<any[]>([]);
+    const [connections, setConnections] = useState<Patient[]>([]);
     const [selectedTab, setSelectedTab] = useState<'routines' | 'exercises'>('routines');
-    const [graphData, setGraphData] = useState<{ last_7_days: any[] }>({ last_7_days: [] });
+    const [graphData, setGraphData] = useState<GraphData>({ last_7_days: [] });
+    const [selectedPatientId, setSelectedPatientId] = useState<string>('');
 
-    useEffect(() => {
-        const fetchGraphData = async () => {
-            try {
-                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_graph_data/${therapistId}`);
-                const data = await response.json();
-                setGraphData(data);
-            } catch (error) {
-                console.error('Error fetching graph data:', error);
+    // Memoized data transformations
+    const chartData = useMemo(() => {
+        const data = graphData.last_7_days.map(item => 
+            selectedTab === 'routines' ? Number(item?.routines_count) || 0 : Number(item?.exercises_count) || 0
+        );
+        const maxValue = Math.max(...data, 0);
+        const segments = maxValue > 0 ? maxValue : 1;
+        
+        return {
+            data,
+            segments,
+            chartConfig: {
+                labels: graphData.last_7_days.map(item => item?.date?.slice(5) || ''),
+                datasets: [{ data }]
             }
         };
-        if (therapistId) fetchGraphData();
-    }, [therapistId]);
+    }, [graphData, selectedTab]);
 
-    const routinesData = graphData.last_7_days.map(item => item.routines_count);
-    const exercisesData = graphData.last_7_days.map(item => item.exercises_count);
-    const labels = graphData.last_7_days.map(item => item.date.slice(5));
-
-    const currentData = selectedTab === 'routines' ? routinesData : exercisesData;
-    const maxValue = Math.max(...currentData, 0);
-    const segments = maxValue > 0 ? maxValue : 1;
-
-    const chartData = {
-        labels,
-        datasets: [
-            {
-                data: currentData,
-            }
-        ],
-    };
-
+    // Fetch connections
     const fetchConnections = async () => {
         try {
             const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_connections/${therapistId}/therapist`);
@@ -58,86 +66,144 @@ export default function AnalyticsScreen() {
         } catch (error) {
             console.error('Error fetching connections:', error);
         }
-    }
+    };
 
+    // Fetch graph data
+    const fetchGraphData = async () => {
+        if (!selectedPatientId) return;
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_graph_data/${selectedPatientId}`);
+            const data = await response.json();
+            setGraphData(data);
+        } catch (error) {
+            console.error('Error fetching graph data:', error);
+        }
+    };
+
+    // Effects
     useEffect(() => {
         fetchConnections();
     }, []);
 
+    useEffect(() => {
+        if (connections.length > 0 && !selectedPatientId) {
+            setSelectedPatientId(connections[0]._id);
+        }
+    }, [connections]);
+
+    useEffect(() => {
+        fetchGraphData();
+    }, [selectedPatientId]);
+
     const handleNudge = async (expoPushToken: string, patientId: string) => {
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/send_push_message/${expoPushToken}?message=${user?.firstName} ${user?.lastName} nudged you! Remember to check your progress!`,{
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
+            const response = await fetch(
+                `${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/send_push_message/${expoPushToken}?message=${user?.firstName} ${user?.lastName} nudged you! Remember to check your progress!`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+            
             if (!response.ok) {
-                console.error('Error sending nudge:', response.statusText);
+                throw new Error('Failed to send nudge');
             }
+            
             Alert.alert('Nudge sent successfully!');
-            return router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
+            router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
         } catch (error) {
             console.error('Error sending nudge:', error);
+            Alert.alert('Error', 'Failed to send nudge. Please try again.');
         }
     };
 
-    const handleViewDetails = (name: string) => {
-        console.log(`Viewing details for ${name}`);
+    const handleViewDetails = (patientId: string) => {
+        router.push(`/(tabs)/analytics/patientDetails?patientId=${patientId}`);
     };
 
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <ScreenHeader title="Patient Analytics" />
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+                <View style={styles.pickerContainer}>
+                    <Picker
+                        selectedValue={selectedPatientId}
+                        onValueChange={setSelectedPatientId}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Select a patient..." value="" />
+                        {connections.map((patient) => (
+                            <Picker.Item
+                                key={patient._id}
+                                label={`${patient.firstname} ${patient.lastname}`}
+                                value={patient._id}
+                            />
+                        ))}
+                    </Picker>
+                </View>
+
                 <View style={styles.graphContainer}>
-                        <BarChart
-                            data={chartData}
-                            width={width - 32}
-                            height={215}
-                            chartConfig={{
-                                backgroundColor: '#ffffff',
-                                backgroundGradientFrom: '#ffffff',
-                                backgroundGradientTo: '#ffffff',
-                                decimalPlaces: 0,
-                                color: (opacity = 1) => AppColors.Blue,
-                                fillShadowGradient: AppColors.Blue,
-                                fillShadowGradientOpacity: 1,
-                                style: {
-                                    borderRadius: 25
-                                },
-                                barPercentage: 0.5,
-                                propsForLabels: {
-                                    fontSize: 10
-                                }
-                            }}
-                            style={{
-                                marginVertical: 8,
-                                borderRadius: 16,
-                            }}
-                            yAxisLabel=""
-                            yAxisSuffix=""
-                            showBarTops={true}
-                            withInnerLines={false}
-                            withVerticalLabels={true}
-                            withHorizontalLabels={true}
-                            segments={segments}
-                        />
+                    {chartData.data.length > 0 ? (
+                        <View style={styles.graphPlaceholder}>
+                            <BarChart
+                                data={chartData.chartConfig}
+                                width={width - 32}
+                                height={215}
+                                chartConfig={{
+                                    backgroundColor: '#ffffff',
+                                    backgroundGradientFrom: '#ffffff',
+                                    backgroundGradientTo: '#ffffff',
+                                    decimalPlaces: 0,
+                                    color: (opacity = 1) => AppColors.Blue,
+                                    fillShadowGradient: AppColors.Blue,
+                                    fillShadowGradientOpacity: 1,
+                                    style: { borderRadius: 25 },
+                                    barPercentage: 0.5,
+                                    propsForLabels: { fontSize: 10 }
+                                }}
+                                style={styles.chart}
+                                yAxisLabel=""
+                                yAxisSuffix=""
+                                showBarTops={true}
+                                withInnerLines={false}
+                                withVerticalLabels={true}
+                                withHorizontalLabels={true}
+                                segments={chartData.segments}
+                            />
+                        </View>
+                    ) : (
+                        <View style={styles.graphPlaceholder}>
+                            <Text style={styles.graphText}>No data available</Text>
+                        </View>
+                    )}
+
                     <View style={styles.tabContainer}>
-                        <TouchableOpacity style={[styles.tab, selectedTab === 'routines' && styles.activeTab]} onPress={() => setSelectedTab('routines')}>
-                            <Text style={selectedTab === 'routines' ? styles.activeTabText : styles.tabText}>Routines</Text>
+                        <TouchableOpacity 
+                            style={[styles.tab, selectedTab === 'routines' && styles.activeTab]} 
+                            onPress={() => setSelectedTab('routines')}
+                        >
+                            <Text style={[styles.tabText, selectedTab === 'routines' && styles.activeTabText]}>
+                                Routines
+                            </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.tab, selectedTab === 'exercises' && styles.activeTab]} onPress={() => setSelectedTab('exercises')}>
-                            <Text style={selectedTab === 'exercises' ? styles.activeTabText : styles.tabText}>Exercises</Text>
+                        <TouchableOpacity 
+                            style={[styles.tab, selectedTab === 'exercises' && styles.activeTab]} 
+                            onPress={() => setSelectedTab('exercises')}
+                        >
+                            <Text style={[styles.tabText, selectedTab === 'exercises' && styles.activeTabText]}>
+                                Exercises
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 <View style={styles.cardsContainer}>
-                    {connections.map((patient, index) => (
-                        <View key={index} style={styles.card}>
+                    {connections.map((patient) => (
+                        <View key={patient._id} style={styles.card}>
                             <View style={styles.mainContent}>
-                                <Text style={styles.name}>{patient.firstname} {patient.lastname}</Text>
+                                <Text style={styles.name}>
+                                    {patient.firstname} {patient.lastname}
+                                </Text>
                                 <Text style={[
                                     styles.status,
                                     patient.status === 'on-track' ? styles.onTrack : styles.offTrack
@@ -146,23 +212,21 @@ export default function AnalyticsScreen() {
                                 </Text>
                             </View>
                             <View style={styles.buttons}>
-
-                            <LinearGradient
-                                        colors={[AppColors.Purple, AppColors.Blue]}
-                                        style={styles.button}
+                                <LinearGradient
+                                    colors={[AppColors.Purple, AppColors.Blue]}
+                                    style={styles.button}
+                                >
+                                    <TouchableOpacity
+                                        style={styles.buttonInner}
+                                        onPress={() => handleNudge(patient.expoPushToken, patient._id)}
                                     >
-                                        <TouchableOpacity
-                                            style={styles.buttonInner}
-                                            onPress={() => handleNudge(patient.expoPushToken, patient._id)}
-        
-                                        >
-                                            <ThemedText style={styles.buttonText}>Nudge</ThemedText>
-                                        </TouchableOpacity>
-                                    </LinearGradient>
+                                        <ThemedText style={styles.buttonText}>Nudge</ThemedText>
+                                    </TouchableOpacity>
+                                </LinearGradient>
 
                                 <TouchableOpacity 
                                     style={styles.viewButton}
-                                    onPress={() => handleViewDetails(patient.name)}
+                                    onPress={() => handleViewDetails(patient._id)}
                                 >
                                     <Text style={styles.viewButtonText}>View Details</Text>
                                     <Image 
@@ -183,6 +247,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    pickerContainer: {
+        marginHorizontal: 16,
+        marginBottom: 8,
+    },
+    picker: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+    },
     graphContainer: {
         padding: 16,
     },
@@ -193,6 +265,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+    },
+    chart: {
+        marginVertical: 8,
+        borderRadius: 16,
     },
     graphText: {
         fontSize: 16,
@@ -269,12 +345,23 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 8,
     },
-    nudgeButton: {
-        flex: 1,
-        backgroundColor: AppColors.Blue,
-        padding: 8,
-        borderRadius: 8,
+    button: {
+        borderRadius: 25,
+        width: '50%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    buttonInner: {
+        padding: 5,
         alignItems: 'center',
+        borderRadius: 20,
+    },
+    buttonText: {
+        fontWeight: 'medium',
+        color: 'white',
     },
     viewButton: {
         flex: 1,
@@ -293,24 +380,5 @@ const styles = StyleSheet.create({
         width: 16,
         height: 16,
         tintColor: AppColors.Blue,
-    },
-
-    buttonInner: {
-        padding: 5,
-        alignItems: 'center',
-        borderRadius: 20,
-    },
-    buttonText: {
-        fontWeight: 'medium',
-        color: 'white',
-    },
-    button: {
-        borderRadius: 25,
-        width: '50%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
     },
 });
