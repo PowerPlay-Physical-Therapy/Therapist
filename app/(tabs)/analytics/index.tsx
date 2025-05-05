@@ -117,8 +117,26 @@ export default function AnalyticsScreen() {
         }
     };
 
-    const handleViewDetails = (patientId: string) => {
-        router.push(`/(tabs)/analytics/patientDetails?patientId=${patientId}`);
+    const handleViewDetails = async (patientId: string) => {
+            try {
+                const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/patient/get_patient/${patientId}`);
+                if (!response.ok) {
+                    throw new Error('Patient not found');
+                }
+                const data = await response.json();
+        
+                router.push({
+                    pathname: '/profile/patient_info',
+                    params: {
+                        patientId: data._id,
+                        therapistId: user?.id,
+                        name: `${data.firstname} ${data.lastname}`,
+                        imageUrl: data.imageUrl,
+                    }
+                });
+            } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to fetch patient details');
+            }
     };
 
     return (
@@ -250,10 +268,26 @@ const styles = StyleSheet.create({
     pickerContainer: {
         marginHorizontal: 16,
         marginBottom: 8,
+        backgroundColor: AppColors.OffWhite,
+        borderRadius: 20,
+        padding: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        elevation: 2,
+        alignSelf: 'center',
+        width: '90%',
     },
     picker: {
         backgroundColor: 'white',
-        borderRadius: 12,
+        borderRadius: 16,
+        height: 40,
+        color: AppColors.Blue,
+        fontSize: 15,
+        paddingHorizontal: 8,
+        width: '100%',
+        alignSelf: 'center',
     },
     graphContainer: {
         padding: 16,
@@ -343,7 +377,7 @@ const styles = StyleSheet.create({
     buttons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 8,
+        gap: 10,
     },
     button: {
         borderRadius: 25,
