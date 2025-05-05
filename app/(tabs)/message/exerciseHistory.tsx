@@ -290,15 +290,3 @@ const styles = StyleSheet.create({
 
 
 
-// <Modal 
-// transparent={true}
-// visible={isRefreshing}
-// >
-// <View style={{flex: 1, justifyContent: "center", alignItems: "center"}}>
-
-//     <View style={styles.modalView}>
-//         <ThemedText style={{fontSize: 16}}>Updating...</ThemedText>
-//         <LoadingSpinner color={AppColors.Blue} durationMs={1000}/>
-//     </View>
-// </View>
-// </Modal>
