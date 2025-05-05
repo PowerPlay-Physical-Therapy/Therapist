@@ -1,12 +1,12 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { StyleSheet, Platform, View, Text, TouchableOpacity, ScrollView, Image, Dimensions, } from 'react-native';
+import { StyleSheet, Platform, View, Text, TouchableOpacity, ScrollView, Image, Dimensions, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import ScreenHeader from '@/components/ScreenHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const {height, width }= Dimensions.get('window');
 
@@ -31,10 +31,20 @@ export default function AnalyticsScreen() {
             console.error('Error fetching connections:', error);
         }
     }
+
+    useEffect(() => {
+        fetchConnections();
+    }, []);
+
     const handleNudge = async (expoPushToken: string) => {
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/send_push_message/${expoPushToken}`)
-            const data = await response.json();
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/send_push_message/${expoPushToken}?message=${user?.firstName} ${user?.lastName} nudged you! Remember to check your progress!`)
+            if (!response.ok) {
+                console.error('Error sending nudge:', response.statusText);
+            }
+            Alert.alert('Nudge sent successfully!');
+        } catch (error) {
+            console.error('Error sending nudge:', error);
         }
     };
 
@@ -65,7 +75,7 @@ export default function AnalyticsScreen() {
                 </View>
 
                 <View style={styles.cardsContainer}>
-                    {mockData.map((patient, index) => (
+                    {connections.map((patient, index) => (
                         <View key={index} style={styles.card}>
                             <View style={styles.mainContent}>
                                 <Text style={styles.name}>{patient.name}</Text>
@@ -79,7 +89,7 @@ export default function AnalyticsScreen() {
                             <View style={styles.buttons}>
                                 <TouchableOpacity 
                                     style={styles.nudgeButton}
-                                    onPress={() => handleNudge(patient.name)}
+                                    onPress={() => handleNudge(patient.expoPushToken)}
                                 >
                                     <Text style={styles.buttonText}>Nudge</Text>
                                 </TouchableOpacity>
