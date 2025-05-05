@@ -7,6 +7,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
 import { useState, useEffect } from 'react';
+import { Redirect, useRouter } from 'expo-router';
 
 const {height, width }= Dimensions.get('window');
 
@@ -17,7 +18,9 @@ const mockData = [
     { name: 'Grand Johnson', status: 'on-track' },
 ];
 
+
 export default function AnalyticsScreen() {
+    const router = useRouter();
     const {user} = useUser();
     const [therapistId, setTherapistId] = useState<string | null>(user?.id || null);
     const [connections, setConnections] = useState<any[]>([]);
@@ -36,7 +39,7 @@ export default function AnalyticsScreen() {
         fetchConnections();
     }, []);
 
-    const handleNudge = async (expoPushToken: string) => {
+    const handleNudge = async (expoPushToken: string, patientId: string) => {
         try {
             const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/send_push_message/${expoPushToken}?message=${user?.firstName} ${user?.lastName} nudged you! Remember to check your progress!`,{
                 method: 'POST',
@@ -48,6 +51,7 @@ export default function AnalyticsScreen() {
                 console.error('Error sending nudge:', response.statusText);
             }
             Alert.alert('Nudge sent successfully!');
+            return router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
         } catch (error) {
             console.error('Error sending nudge:', error);
         }
@@ -94,7 +98,7 @@ export default function AnalyticsScreen() {
                             <View style={styles.buttons}>
                                 <TouchableOpacity 
                                     style={styles.nudgeButton}
-                                    onPress={() => handleNudge(patient.expoPushToken)}
+                                    onPress={() => handleNudge(patient.expoPushToken, patient._id)}
                                 >
                                     <Text style={styles.buttonText}>Nudge</Text>
                                 </TouchableOpacity>
