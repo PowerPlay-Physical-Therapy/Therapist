@@ -146,10 +146,7 @@ export default function ExerciseHistory() {
                                                 <Text style={styles.exerciseDetails}>Sets: </Text>
                                                 {exercise.sets}
                                             </ThemedText>
-                                        </View>
-                                        <Link href={`/home/editRoutine?routineId=${routine._id}`}>
-                                            <Image source={require('@/assets/images/chevron-right.png')} style={{width: 20, height: 20}}/>
-                                        </Link>                                    
+                                        </View>                          
                                     </View>
                                 
                                 </Link>
