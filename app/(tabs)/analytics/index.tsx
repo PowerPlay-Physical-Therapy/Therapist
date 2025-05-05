@@ -38,7 +38,12 @@ export default function AnalyticsScreen() {
 
     const handleNudge = async (expoPushToken: string) => {
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/send_push_message/${expoPushToken}?message=${user?.firstName} ${user?.lastName} nudged you! Remember to check your progress!`)
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/therapist/send_push_message/${expoPushToken}?message=${user?.firstName} ${user?.lastName} nudged you! Remember to check your progress!`,{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
             if (!response.ok) {
                 console.error('Error sending nudge:', response.statusText);
             }
@@ -78,7 +83,7 @@ export default function AnalyticsScreen() {
                     {connections.map((patient, index) => (
                         <View key={index} style={styles.card}>
                             <View style={styles.mainContent}>
-                                <Text style={styles.name}>{patient.name}</Text>
+                                <Text style={styles.name}>{patient.firstname} {patient.lastname}</Text>
                                 <Text style={[
                                     styles.status,
                                     patient.status === 'on-track' ? styles.onTrack : styles.offTrack
