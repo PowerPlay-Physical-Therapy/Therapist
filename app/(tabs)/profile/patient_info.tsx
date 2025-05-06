@@ -103,9 +103,12 @@ export default function PatientConnectionDetails() {
         )}
 
         {/* Placeholder buttons for future functionality */}
-        <ThemedView style={styles.buttonRow}>
-          <ThemedText style={styles.linkText}>Home Exercise History</ThemedText>
-        </ThemedView>
+        <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push(`/(tabs)/profile/exercise_history`)}
+        >
+          <ThemedText style={styles.actionButtonText}>Home Exercise History</ThemedText>
+        </TouchableOpacity>
         <ThemedView style={styles.buttonRow}>
           <ThemedText style={styles.linkText}>Mute/Un-mute Patient</ThemedText>
         </ThemedView>
@@ -180,5 +183,24 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 16,
     fontWeight: '500'
+  },
+  actionButton: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    margin: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
