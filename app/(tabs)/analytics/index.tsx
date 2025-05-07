@@ -124,10 +124,9 @@ export default function AnalyticsScreen() {
             }
             
             Alert.alert('Nudge sent successfully!');
-            router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
+            router.navigate(`/(tabs)/message`);
         } catch (error) {
-            Alert.alert('Nudge sent successfully!');
-            router.push(`/(tabs)/message/[chat]?patientId=${patientId}`);
+            Alert.alert('Nudge failed, try again later');
         }
     };
 
