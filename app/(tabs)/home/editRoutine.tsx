@@ -524,7 +524,7 @@ export default function EditRoutineScreen() {
                                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                     <Text style={styles.label}>Exercise Name:</Text>
                                     <TextInput
-                                        style={styles.input}
+                                        style={[styles.input, { maxWidth: screenWidth * 0.4}]}
                                         value={exercise.title}
                                         onChangeText={(text) => updateExercise(index, "title", text)}
                                     />

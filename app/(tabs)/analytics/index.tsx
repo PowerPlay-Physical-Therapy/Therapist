@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { StyleSheet, Platform, View, Text, TouchableOpacity, ScrollView, Image, Dimensions, Alert } from 'react-native';
+import { StyleSheet, Platform, View, Text, TouchableOpacity, ScrollView, Image, Dimensions, Alert, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppColors } from '@/constants/Colors';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -37,7 +37,14 @@ export default function AnalyticsScreen() {
     const [connections, setConnections] = useState<Patient[]>([]);
     const [selectedTab, setSelectedTab] = useState<'routines' | 'exercises'>('routines');
     const [graphData, setGraphData] = useState<GraphData>({ last_7_days: [] });
-    const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+    const [selectedPatient, setSelectedPatient] = useState<Patient>({
+        _id: "",
+        firstname: "",
+        lastname: "",
+        status: 'on-track',
+        expoPushToken: "",
+    });
+    const [isRefreshing, setIsRefreshing] = useState(false);
     // Memoized data transformations
     const chartData = useMemo(() => {
         const data = graphData.last_7_days?.map(item => 
@@ -70,16 +77,22 @@ export default function AnalyticsScreen() {
 
     // Fetch graph data
     const fetchGraphData = async () => {
-        if (!selectedPatientId) return;
+        if (!selectedPatient._id) return;
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_graph_data/${selectedPatientId}`);
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/get_graph_data/${selectedPatient._id}`);
             const data = await response.json();
             setGraphData(data);
-            
         } catch (error) {
             console.error('Error fetching graph data:', error);
         }
     };
+
+    const onRefresh = async () => {
+        setIsRefreshing(true);
+        await fetchConnections();
+        await fetchGraphData();
+        setIsRefreshing(false);
+    }
 
     // Effects
     useEffect(() => {
@@ -87,14 +100,14 @@ export default function AnalyticsScreen() {
     }, []);
 
     useEffect(() => {
-        if (connections.length > 0 && !selectedPatientId) {
-            setSelectedPatientId(connections[0]._id);
+        if (connections.length > 0 && !selectedPatient._id) {
+            setSelectedPatient(connections[0]);
         }
     }, [connections]);
 
     useEffect(() => {
         fetchGraphData();
-    }, [selectedPatientId]);
+    }, [selectedPatient]);
 
     const handleNudge = async (expoPushToken: string, patientId: string) => {
         try {
@@ -125,9 +138,8 @@ export default function AnalyticsScreen() {
                     throw new Error('Patient not found');
                 }
                 const data = await response.json();
-        
                 router.push({
-                    pathname: '/profile/patient_info',
+                    pathname: '/analytics/patientInfo',
                     params: {
                         patientId: data._id,
                         therapistId: user?.id,
@@ -143,14 +155,21 @@ export default function AnalyticsScreen() {
     return (
         <LinearGradient style={{ flex: 1, paddingTop: Platform.OS == 'ios' ? 50 : 0 }} colors={[AppColors.OffWhite, AppColors.LightBlue]}>
             <ScreenHeader title="Patient Analytics" />
-            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
+                >
                 <View style={styles.pickerContainer}>
                     <Picker
-                        selectedValue={selectedPatientId}
-                        onValueChange={setSelectedPatientId}
                         style={styles.picker}
+                        selectedValue={selectedPatient._id}
+                        onValueChange={(itemValue) => {
+                            const selected = connections.find(patient => patient._id === itemValue);
+                            if (selected) {
+                                setSelectedPatient(selected);
+                            }
+                        }}
                     >
-                        <Picker.Item label="Select a patient..." value="" />
+                        <Picker.Item label="Select a patient" value="" />
                         {connections.map((patient) => (
                             <Picker.Item
                                 key={patient._id}
@@ -160,7 +179,7 @@ export default function AnalyticsScreen() {
                         ))}
                     </Picker>
                 </View>
-
+                
                 <View style={styles.graphContainer}>
                     {chartData.data.length > 0 ? (
                         <View style={styles.graphPlaceholder}>
@@ -194,7 +213,7 @@ export default function AnalyticsScreen() {
                         <View style={styles.graphPlaceholder}>
                             <Text style={styles.graphText}>No data available</Text>
                         </View>
-                    )}
+                    )} 
 
                     <View style={styles.tabContainer}>
                         <TouchableOpacity 
@@ -264,7 +283,8 @@ export default function AnalyticsScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        marginTop: 16,
+        marginBottom: 80,
     },
     pickerContainer: {
         marginHorizontal: 16,
@@ -278,18 +298,17 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
         alignSelf: 'center',
+        justifyContent: 'center',
+        alignItems: 'center',
         width: '90%',
+        height: 140,
+        overflow: 'hidden',
     },
     picker: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        height: 40,
-        color: AppColors.Blue,
-        fontSize: 15,
-        paddingHorizontal: 8,
         width: '100%',
-        alignSelf: 'center',
-        zIndex: 2,
+        backgroundColor: 'transparent',
+        borderRadius: 20,
+        color: AppColors.Blue,
     },
     graphContainer: {
         padding: 16,
@@ -335,6 +354,7 @@ const styles = StyleSheet.create({
     },
     cardsContainer: {
         padding: 16,
+        
     },
     card: {
         backgroundColor: 'white',
