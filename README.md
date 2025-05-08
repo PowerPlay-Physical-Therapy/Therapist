@@ -1,4 +1,4 @@
-# PowerPlay Patient Frontend app 👋
+# PowerPlay Therapist Frontend app 👋
 
 This is an [Expo](https://expo.dev) project.
 
