@@ -43,7 +43,7 @@
         "expo-font",
         {
           "fonts": [
-            "/assets/fonts/Meticula-Regular.ttf"
+            "./assets/fonts/Meticula-Regular.ttf"
           ]
         }
       ],
